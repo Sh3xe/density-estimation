@@ -114,7 +114,7 @@ template<
 	typename Optimizer,
 	typename FieldFunc
 >
-void test_optimizer_to_md(
+void print_benchmark(
 	Optimizer &opt,
 	FieldFunc &func,
 	const vector_t &init_pt,
@@ -163,16 +163,17 @@ void test_optim(OptimizerType &opt, const std::string &title) {
 	std::cout << "|Method|n_iter| x-x* l2 err | f-f* l2 err | real min | approx min | time (microsec) |" << std::endl;
 	std::cout << "|-|-|-|-|-|-|-|" << std::endl;
 
-	test_optimizer_to_md<SquareFunction>(opt, square_2d, init_1, 2, "Square 2D" );
-	test_optimizer_to_md<SquareFunction>(opt, square_30d, init_3, 30, "Square 30D" );
+	// Benchmark the method on different functions and print the result to markdown in the standard output
+	print_benchmark<SquareFunction>(opt, square_2d, init_1, 2, "Square 2D" );
+	print_benchmark<SquareFunction>(opt, square_30d, init_3, 30, "Square 30D" );
 
-	test_optimizer_to_md<Schwefel>(opt, schwefel_2d, init_1 * 20.0, 2, "Schwefel 2D" );
-	test_optimizer_to_md<Schwefel>(opt, schwefel_10d, init_2 * 20.0, 10, "Schwefel 10D" );
+	print_benchmark<Schwefel>(opt, schwefel_2d, init_1 * 20.0, 2, "Schwefel 2D" );
+	print_benchmark<Schwefel>(opt, schwefel_10d, init_2 * 20.0, 10, "Schwefel 10D" );
 
-	test_optimizer_to_md<Rastrigin>(opt, rastrigin_2d, init_1 * 3.0, 2, "Rastrigin 2D" );
-	test_optimizer_to_md<Rastrigin>(opt, rastrigin_30d, init_3 * 3.0, 30, "Rastrigin 30D" );
+	print_benchmark<Rastrigin>(opt, rastrigin_2d, init_1 * 3.0, 2, "Rastrigin 2D" );
+	print_benchmark<Rastrigin>(opt, rastrigin_30d, init_3 * 3.0, 30, "Rastrigin 30D" );
 
-	test_optimizer_to_md<SchafferF6>(opt, schaffer_f6, init_1, 2, "Schaffer F6" );
+	print_benchmark<SchafferF6>(opt, schaffer_f6, init_1, 2, "Schaffer F6" );
 }
 
 int main() {
@@ -182,6 +183,7 @@ int main() {
 		GradientDescent<Dynamic, WolfeLineSearch> optimizer(500, 1e-5, 1e-2);
 		test_optim(optimizer, "GradientDescent<Dynamic, WolfeLineSearch>");
 	}
+
 
 	return 0;
 }
