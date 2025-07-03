@@ -42,7 +42,24 @@ struct Schwefel {
 				s += -x[i] * std::sin(std::sqrt(std::abs(x[i])));
 		}
 		double dimension = (double)x.rows();
-		return 418.9829 + dimension * s;
+		return 418.9829 * dimension + s;
+	}
+};
+
+struct Rosenbrock {
+	Rosenbrock() = default;
+
+	static vector_t argmin(int dim) {
+		fdapde_assert(dim == 2);
+		return vector_t::Constant(dim, 1, 1.0);
+	}
+
+	static double min() { return 0.0; }
+
+	double operator()(const vector_t& x) const {
+		constexpr double a = 1.0;
+		constexpr double b = 100.0;
+		return (a-x[0])*(a-x[0]) + b*(x[1]-x[0]*x[0])*(x[1]-x[0]*x[0]);
 	}
 };
 
@@ -68,8 +85,8 @@ struct Rastrigin {
 	}
 };
 
-struct SquareFunction {
-	SquareFunction() = default;
+struct Sphere {
+	Sphere() = default;
 
 	static vector_t argmin(int dim) {
 		return vector_t::Zero(dim, 1);
@@ -87,12 +104,24 @@ struct SquareFunction {
 	}
 };
 
+std::string duration_to_str(const microsec &duration) {
+	if(duration.count() < 1e3) {
+		return std::to_string((int)duration.count()) + std::string("μs");
+	} else if(duration.count() < 1e6) {
+		return std::to_string((int)(duration.count()*1e-3) ) + std::string("ms");
+	} else if(duration.count() < 1e9) {
+		return std::to_string((int)(duration.count()*1e-6) ) + std::string("s");
+	} else {
+		return ">1000s";
+	}
+}
+
 template <typename OptimizerType>
 void print_performances(
 	OptimizerType &opt,
 	const vector_t &argmin,
 	double min,
-	double time_microsec,
+	const microsec &duration,
 	const std::string &test_case
 ) {
 	// print a markdown table, to be exported to pdf for better visibility
@@ -105,7 +134,7 @@ void print_performances(
 		"|" << f_err <<
 		"|" << min << 
 		"|" << opt.value() << 
-		"|" << time_microsec << 
+		"|" << duration_to_str(duration) << 
 		"|\n";
 }
 
@@ -136,7 +165,7 @@ void print_benchmark(
 		opt,
 		real_argmin,
 		real_min,
-		duration / 100.0,
+		microsec(duration / 100.0),
 		name
 	);
 }
@@ -148,24 +177,27 @@ void test_optim(OptimizerType &opt, const std::string &title) {
 	ScalarField<Dynamic, SchafferF6>     schaffer_f6(2);
 	ScalarField<Dynamic, Schwefel>       schwefel_2d(2);
 	ScalarField<Dynamic, Schwefel>       schwefel_10d(10);
-	ScalarField<Dynamic, SquareFunction> square_2d(2);
-	ScalarField<Dynamic, SquareFunction> square_30d(30);
+	ScalarField<Dynamic, Sphere> sphere_2d(2);
+	ScalarField<Dynamic, Sphere> sphere_30d(30);
 	ScalarField<Dynamic, Rastrigin>      rastrigin_30d(30);
 	ScalarField<Dynamic, Rastrigin>      rastrigin_2d(2);
+	ScalarField<Dynamic, Rosenbrock>     rosenbrock(2);
 	
 	// Initial points
 	vector_t init_1 = vector_t::Constant(2, 1, 1.0);
 	vector_t init_2 = vector_t::Constant(10, 1, 1.0);
 	vector_t init_3 = vector_t::Constant(30, 1, 1.0);
+	vector_t init_4 (2);
+	init_4 << -1.2, 1;
 
 	// Markdown header
 	std::cout << "### `" << title << "`\n";
-	std::cout << "|Method|n_iter| x-x* l2 err | f-f* l2 err | real min | approx min | time (microsec) |" << std::endl;
+	std::cout << "|Method|n_iter| x-x* l2 err | f-f* l2 err | real min | approx min | time |" << std::endl;
 	std::cout << "|-|-|-|-|-|-|-|" << std::endl;
 
 	// Benchmark the method on different functions and print the result to markdown in the standard output
-	print_benchmark<SquareFunction>(opt, square_2d, init_1, 2, "Square 2D" );
-	print_benchmark<SquareFunction>(opt, square_30d, init_3, 30, "Square 30D" );
+	print_benchmark<Sphere>(opt, sphere_2d, init_1, 2, "Sphere 2D" );
+	print_benchmark<Sphere>(opt, sphere_30d, init_3, 30, "Sphere 30D" );
 
 	print_benchmark<Schwefel>(opt, schwefel_2d, init_1 * 20.0, 2, "Schwefel 2D" );
 	print_benchmark<Schwefel>(opt, schwefel_10d, init_2 * 20.0, 10, "Schwefel 10D" );
@@ -173,17 +205,38 @@ void test_optim(OptimizerType &opt, const std::string &title) {
 	print_benchmark<Rastrigin>(opt, rastrigin_2d, init_1 * 3.0, 2, "Rastrigin 2D" );
 	print_benchmark<Rastrigin>(opt, rastrigin_30d, init_3 * 3.0, 30, "Rastrigin 30D" );
 
-	print_benchmark<SchafferF6>(opt, schaffer_f6, init_1, 2, "Schaffer F6" );
+	print_benchmark<SchafferF6>(opt, schaffer_f6, init_1 * 5.0, 2, "Schaffer F6" );
+
+	print_benchmark<SchafferF6>(opt, rosenbrock, init_4, 2, "Rosenbrock 2D" );
 }
 
 int main() {
 	std::cout << std::setprecision(2);
 
 	{
-		GradientDescent<Dynamic, WolfeLineSearch> optimizer(500, 1e-5, 1e-2);
-		test_optim(optimizer, "GradientDescent<Dynamic, WolfeLineSearch>");
+		GradientDescent<Dynamic> optimizer(200, 1e-5, 1e-2);
+		test_optim(optimizer, "Gradient descent");
 	}
 
+	{
+		GradientDescent<Dynamic, WolfeLineSearch> optimizer(500, 1e-5, 1e-2);
+		test_optim(optimizer, "Gradient descent, Wolfe line search");
+	}
+
+	{
+		NelderMead<Dynamic> optimizer(500, 1e-5);
+		test_optim(optimizer, "Nelder-Mead");
+	}
+
+	{
+		ConjugateGradient<Dynamic, WolfeLineSearch> optimizer(500, 1e-5, 1e-2, true);
+		test_optim(optimizer, "Conjugate gradient, Wolfe line search");
+	}
+
+	{
+		LBFGS<Dynamic, WolfeLineSearch> optimizer(500, 1e-5, 1e-2, 30);
+		test_optim(optimizer, "LBFGS-30, Wolfe line search");
+	}
 
 	return 0;
 }
