@@ -17,7 +17,7 @@ struct SchafferF6 {
 	static double min() { return 0.0; }
 
 	double operator()(const vector_t& x) const {
-		double r = x[0]*x[0] + x[1]*x[1];
+		double r = x.dot(x);
 		double a = std::sin(std::sqrt(r));
 		double b = 1.0 + 0.001 * r;
 		return 0.5 + ( a*a - 0.5 ) / ( b*b );
@@ -95,12 +95,7 @@ struct Sphere {
 	static double min() { return 0.0; }
 
 	double operator()(const vector_t& x) const {
-		double res = 0.0;
-
-		for(int i = 0; i < x.rows(); ++i)
-			res += x[i]*x[i];
-
-		return res;
+		return x.dot(x);
 	}
 };
 
@@ -125,15 +120,14 @@ void print_performances(
 	const std::string &test_case
 ) {
 	// print a markdown table, to be exported to pdf for better visibility
-	double x_err = (argmin - opt.optimum()).norm();
-	double f_err = (min - opt.value()); f_err *= f_err;
+	double x_err = (argmin - opt.optimum()).norm(); x_err = std::sqrt(x_err);
+	double f_err = std::abs(min - opt.value());
+
 	std::cout << 
 		"|" << test_case << 
 		"|" << opt.n_iter() << 
 		"|" << x_err <<
 		"|" << f_err <<
-		"|" << min << 
-		"|" << opt.value() << 
 		"|" << duration_to_str(duration) << 
 		"|\n";
 }
@@ -177,8 +171,8 @@ void test_optim(OptimizerType &opt, const std::string &title) {
 	ScalarField<Dynamic, SchafferF6>     schaffer_f6(2);
 	ScalarField<Dynamic, Schwefel>       schwefel_2d(2);
 	ScalarField<Dynamic, Schwefel>       schwefel_10d(10);
-	ScalarField<Dynamic, Sphere> sphere_2d(2);
-	ScalarField<Dynamic, Sphere> sphere_30d(30);
+	ScalarField<Dynamic, Sphere>         sphere_2d(2);
+	ScalarField<Dynamic, Sphere>         sphere_30d(30);
 	ScalarField<Dynamic, Rastrigin>      rastrigin_30d(30);
 	ScalarField<Dynamic, Rastrigin>      rastrigin_2d(2);
 	ScalarField<Dynamic, Rosenbrock>     rosenbrock(2);
@@ -192,22 +186,18 @@ void test_optim(OptimizerType &opt, const std::string &title) {
 
 	// Markdown header
 	std::cout << "### `" << title << "`\n";
-	std::cout << "|Method|n_iter| x-x* l2 err | f-f* l2 err | real min | approx min | time |" << std::endl;
-	std::cout << "|-|-|-|-|-|-|-|" << std::endl;
+	std::cout << "|Method|n_iter| x-x* l2 err | f-f* l2 err | time |" << std::endl;
+	std::cout << "|-|-|-|-|-|" << std::endl;
 
 	// Benchmark the method on different functions and print the result to markdown in the standard output
 	print_benchmark<Sphere>(opt, sphere_2d, init_1, 2, "Sphere 2D" );
 	print_benchmark<Sphere>(opt, sphere_30d, init_3, 30, "Sphere 30D" );
-
 	print_benchmark<Schwefel>(opt, schwefel_2d, init_1 * 20.0, 2, "Schwefel 2D" );
 	print_benchmark<Schwefel>(opt, schwefel_10d, init_2 * 20.0, 10, "Schwefel 10D" );
-
 	print_benchmark<Rastrigin>(opt, rastrigin_2d, init_1 * 3.0, 2, "Rastrigin 2D" );
 	print_benchmark<Rastrigin>(opt, rastrigin_30d, init_3 * 3.0, 30, "Rastrigin 30D" );
-
 	print_benchmark<SchafferF6>(opt, schaffer_f6, init_1 * 5.0, 2, "Schaffer F6" );
-
-	print_benchmark<SchafferF6>(opt, rosenbrock, init_4, 2, "Rosenbrock 2D" );
+	print_benchmark<Rosenbrock>(opt, rosenbrock, init_4, 2, "Rosenbrock 2D" );
 }
 
 int main() {
