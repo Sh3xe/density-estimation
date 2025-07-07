@@ -7,6 +7,16 @@ using namespace fdapde;
 using vector_t = Eigen::Matrix<double, Dynamic, 1>;
 using microsec = std::chrono::duration<double, std::micro>;
 
+class PrintValues {
+public:
+	PrintValues() = default;
+	
+	template <typename Opt, typename Obj> bool pre_update_step(Opt& opt, Obj& obj) {
+		std::cout << "----- NEW ITERATION -----" << std::endl;
+		std::cout << opt.x_old << std::endl;
+		return false;
+	}
+};
 struct SchafferF6 {
 	SchafferF6() = default;
 
@@ -120,7 +130,7 @@ void print_performances(
 	const std::string &test_case
 ) {
 	// print a markdown table, to be exported to pdf for better visibility
-	double x_err = (argmin - opt.optimum()).norm(); x_err = std::sqrt(x_err);
+	double x_err = (argmin - opt.optimum()).norm();
 	double f_err = std::abs(min - opt.value());
 
 	std::cout << 
@@ -201,32 +211,32 @@ void test_optim(OptimizerType &opt, const std::string &title) {
 }
 
 int main() {
-	std::cout << std::setprecision(2);
+	std::cout << std::setprecision(2) << std::scientific;
 
-	{
-		GradientDescent<Dynamic> optimizer(200, 1e-5, 1e-2);
-		test_optim(optimizer, "Gradient descent");
-	}
+	// {
+	// 	GradientDescent<Dynamic> optimizer(200, 1e-5, 1e-2);
+	// 	test_optim(optimizer, "Gradient descent");
+	// }
 
-	{
-		GradientDescent<Dynamic, WolfeLineSearch> optimizer(500, 1e-5, 1e-2);
-		test_optim(optimizer, "Gradient descent, Wolfe line search");
-	}
+	// {
+	// 	GradientDescent<Dynamic, WolfeLineSearch> optimizer(500, 1e-5, 1e-2);
+	// 	test_optim(optimizer, "Gradient descent, Wolfe line search");
+	// }
 
 	{
 		NelderMead<Dynamic> optimizer(500, 1e-5);
 		test_optim(optimizer, "Nelder-Mead");
 	}
 
-	{
-		ConjugateGradient<Dynamic, WolfeLineSearch> optimizer(500, 1e-5, 1e-2, true);
-		test_optim(optimizer, "Conjugate gradient, Wolfe line search");
-	}
+	// {
+	// 	ConjugateGradient<Dynamic, WolfeLineSearch> optimizer(500, 1e-5, 1e-2, true);
+	// 	test_optim(optimizer, "Conjugate gradient, Wolfe line search");
+	// }
 
-	{
-		LBFGS<Dynamic, WolfeLineSearch> optimizer(500, 1e-5, 1e-2, 30);
-		test_optim(optimizer, "LBFGS-30, Wolfe line search");
-	}
+	// {
+	// 	LBFGS<Dynamic, WolfeLineSearch> optimizer(500, 1e-5, 1e-2, 30);
+	// 	test_optim(optimizer, "LBFGS-30, Wolfe line search");
+	// }
 
 	return 0;
 }
