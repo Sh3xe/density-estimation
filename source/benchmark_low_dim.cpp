@@ -1,13 +1,15 @@
 #include "benchmark_low_dim.hpp"
 
-std::string duration_to_str(const microsec &duration) {
-	if(duration.count() < 1e3) {
-		return std::to_string((int)duration.count()) + std::string("μs");
-	} else if(duration.count() < 1e6) {
-		return std::to_string((int)(duration.count()*1e-3) ) + std::string("ms");
-	} else if(duration.count() < 1e9) {
-		return std::to_string((int)(duration.count()*1e-6) ) + std::string("s");
-	} else {
-		return ">1000s";
-	}
+void print_performances( const LowDimBenchmarkResult &result ) {
+	// print a markdown table, to be exported to pdf for better visibility
+	double x_err = (result.real_argmin - result.opt_argmin).norm();
+	double f_err = std::abs(result.real_min - result.opt_min);
+
+	std::cout << 
+		"|" << result.title << 
+		"|" << result.iterations << 
+		"|" << x_err <<
+		"|" << f_err <<
+		"|" << duration_to_str(result.duration) << 
+		"|\n";
 }

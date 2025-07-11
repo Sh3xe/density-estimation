@@ -26,15 +26,16 @@ write.csv(mesh$nodesmarker, file.path(directory, "mesh_boundary.csv"))
 write.csv(data, file.path(directory, "sample.csv"))
 
 # Calculate f_init
-lambda_proposal <- 10^seq(from = -1, to = -5, by = -0.5)
+lambda_proposal <- 10^seq(from = -1, to = -5, by = -1.0)
+
+# warning: very expensive
 de <- DE.FEM(
 	data = data,
 	FEMbasis = FEMbasis,
-	lambda <- lambda_proposal,
+	lambda <- 0.1,
 	nfolds = 10,
 	tol1 = 1e-4,
 	nsimulations = 1000,
-	preprocess_method = "RightCV",
 	step_method = "Wolfe_Method",
 	direction_method = "L-BFGS10"
 )

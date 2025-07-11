@@ -4,9 +4,7 @@
 #include <chrono>
 #include <Eigen/Dense>
 
-using namespace fdapde;
-using vector_t = Eigen::Matrix<double, Dynamic, 1>;
-using microsec = std::chrono::duration<double, std::micro>;
+#include "utilities.hpp"
 
 class PrintValues {
 public:
@@ -111,39 +109,28 @@ struct Sphere {
 	}
 };
 
-std::string duration_to_str(const microsec &duration);
+struct LowDimBenchmarkResult {
+	std::string title;
+	microsec duration;
+	double real_min;
+	vector_t real_argmin;
+	double opt_min;
+	vector_t opt_argmin;
+	size_t iterations;
+};
 
-template <typename OptimizerType>
-void print_performances(
-	OptimizerType &opt,
-	const vector_t &argmin,
-	double min,
-	const microsec &duration,
-	const std::string &test_case
-) {
-	// print a markdown table, to be exported to pdf for better visibility
-	double x_err = (argmin - opt.optimum()).norm();
-	double f_err = std::abs(min - opt.value());
-
-	std::cout << 
-		"|" << test_case << 
-		"|" << opt.n_iter() << 
-		"|" << x_err <<
-		"|" << f_err <<
-		"|" << duration_to_str(duration) << 
-		"|\n";
-}
+void print_performances( const LowDimBenchmarkResult &result );
 
 template<
-	typename OptimizerFunc,
 	typename Optimizer,
 	typename FieldFunc
 >
-void print_benchmark(
+LowDimBenchmarkResult benchmark_function(
 	Optimizer &opt,
 	FieldFunc &func,
 	const vector_t &init_pt,
-	int dimension,
+	vector_t real_argmin,
+	double real_min,
 	const std::string &name
 ) {
 	auto begin_time = std::chrono::high_resolution_clock::now();
@@ -151,23 +138,22 @@ void print_benchmark(
 	for(int i = 0; i < 100; ++i) {
 		opt.optimize(func, init_pt);
 	}
-
 	auto end_time = std::chrono::high_resolution_clock::now();
 	double duration = microsec(end_time - begin_time).count();
-	vector_t real_argmin = OptimizerFunc::argmin(dimension);
-	double real_min = OptimizerFunc::min();
 	
-	print_performances(
-		opt,
-		real_argmin,
-		real_min,
-		microsec(duration / 100.0),
-		name
-	);
+	LowDimBenchmarkResult res;
+	res.title = name;
+	res.duration = microsec(duration / 100.0);
+	res.real_argmin = real_argmin;
+	res.real_min = real_min;
+	res.opt_min = opt.value();
+	res.iterations = opt.n_iter();
+	res.opt_argmin = opt.optimum();
+	return res;
 }
 
 template <typename OptimizerType>
-void test_optim(OptimizerType &opt, const std::string &title) {
+std::vector<LowDimBenchmarkResult> benchmark_optimizer(OptimizerType &opt, const std::string &title) {
 
 	// Optimization functions and their init point
 	ScalarField<Dynamic, SchafferF6>     schaffer_f6(2);
@@ -186,18 +172,96 @@ void test_optim(OptimizerType &opt, const std::string &title) {
 	vector_t init_4 (2);
 	init_4 << -1.2, 1;
 
+	// Benchmark the method on different functions and print the result to markdown in the standard output
+	std::vector<LowDimBenchmarkResult> res;
+	res.reserve(8);
+
+	res.push_back(benchmark_function(
+		opt,
+		sphere_2d,
+		init_1, 
+		Sphere::argmin(2),
+		Sphere::min(),
+		"Sphere 2D"
+	));
+
+	res.push_back(benchmark_function(
+		opt,
+		sphere_30d,
+		init_3, 
+		Sphere::argmin(30),
+		Sphere::min(),
+		"Sphere 30D"
+	));
+
+	res.push_back(benchmark_function(
+		opt,
+		schwefel_2d,
+		init_1 * 20.0,
+		Schwefel::argmin(2),
+		Schwefel::min(),
+		"Schwefel 2D" 
+	));
+	
+	res.push_back(benchmark_function(
+		opt,
+		schwefel_10d,
+		init_2 * 20.0,
+		Schwefel::argmin(10),
+		Schwefel::min(),
+		"Schwefel 10D"
+	));
+
+	res.push_back(benchmark_function(
+		opt,
+		rastrigin_2d,
+		init_1 * 3.0,
+		Rastrigin::argmin(2),
+		Rastrigin::min(),
+		"Rastrigin 2D"
+	));
+
+	res.push_back(benchmark_function(
+		opt,
+		rastrigin_30d,
+		init_3 * 3.0,
+		Rastrigin::argmin(30),
+		Rastrigin::min(),
+		"Rastrigin 30D"
+	));
+
+	res.push_back(benchmark_function(
+		opt,
+		schaffer_f6,
+		init_1 * 5.0,
+		SchafferF6::argmin(2),
+		SchafferF6::min(),
+		"Schaffer F6"
+	));
+
+	res.push_back(benchmark_function(
+		opt,
+		rosenbrock,
+		init_4, 
+		Rosenbrock::argmin(2),
+		Rosenbrock::min(),
+		"Rosenbrock 2D"
+	));
+
+
+	return res;
+}
+
+template <typename OptimizerType>
+void print_optim_benchmark(OptimizerType &opt, const std::string &title) {
 	// Markdown header
 	std::cout << "### `" << title << "`\n";
 	std::cout << "|Method|n_iter| x-x* l2 err | f-f* l2 err | time |" << std::endl;
 	std::cout << "|-|-|-|-|-|" << std::endl;
 
-	// Benchmark the method on different functions and print the result to markdown in the standard output
-	print_benchmark<Sphere>(opt, sphere_2d, init_1, 2, "Sphere 2D" );
-	print_benchmark<Sphere>(opt, sphere_30d, init_3, 30, "Sphere 30D" );
-	print_benchmark<Schwefel>(opt, schwefel_2d, init_1 * 20.0, 2, "Schwefel 2D" );
-	print_benchmark<Schwefel>(opt, schwefel_10d, init_2 * 20.0, 10, "Schwefel 10D" );
-	print_benchmark<Rastrigin>(opt, rastrigin_2d, init_1 * 3.0, 2, "Rastrigin 2D" );
-	print_benchmark<Rastrigin>(opt, rastrigin_30d, init_3 * 3.0, 30, "Rastrigin 30D" );
-	print_benchmark<SchafferF6>(opt, schaffer_f6, init_1 * 5.0, 2, "Schaffer F6" );
-	print_benchmark<Rosenbrock>(opt, rosenbrock, init_4, 2, "Rosenbrock 2D" );
+	auto benchmark = benchmark_optimizer(opt, title);
+
+	for(const auto &result: benchmark) {
+		print_performances(result);
+	}
 }
