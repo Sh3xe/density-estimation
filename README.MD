@@ -12,3 +12,6 @@
 ## Test scenario
 * Multiple non-convex low dimensionnal functions
 * Density estimation problems using fdaPDE-cpp
+
+## Credits
+* Simone Panzeri for the test scenario
