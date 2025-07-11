@@ -3,3 +3,4 @@ build
 .RData
 .Rhistory
 outputs
+out_*

@@ -313,7 +313,7 @@ generate.spatial.data.3 <- function(N, density.function = dens.func){
       data_unif = sample.uniform.3(N)
       
       # Evaluate the density function on the generated points
-      f <- dens.func.3(data_unif, mesh)
+      f <- dens.func.3(data_unif)
       f[is.na(f)] = max(f, na.rm = TRUE)
       
       # For each generated point, decide to keep it or discard it on the base of the 

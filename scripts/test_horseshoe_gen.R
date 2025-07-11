@@ -1,9 +1,6 @@
 library(fdaPDE)
 rm(list = ls())
 
-# This script is located under [repo/scripts] and the data is located at [repo/data] 
-setwd(file.path(getwd(), ".."))
-
 # Import helper functions to sample and visualize data
 source("scripts/helper_functions_data.R")
 

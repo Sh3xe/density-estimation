@@ -332,7 +332,7 @@ plot.density.2.5D <- function(coeff, mesh, M = NULL, m = NULL, colorscale = NULL
   nsurf = dim(coeff)[[2]]
   for (isurf in 1:nsurf)
   {
-    open3d(zoom = zoom, userMatrix = userMatrix, windowRect = windowRect)
+    open3d()
     rgl.pop("lights") 
     light3d(specular = "black")
     
