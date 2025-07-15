@@ -20,7 +20,7 @@ FEMbasis <- create.FEM.basis(mesh = mesh)
 # Load the data
 f_init <- read.csv(file.path(directory, "f_init.csv"))
 sample <- read.csv(file.path(directory, "sample.csv"))
-log_dens <- read.csv(file.path(directory, "log_dens.csv"))
+log_dens <- read.csv("./outputs/infections_log_dens_out.csv")
 
 # Plot
 FEMfunction <- FEM(coeff = f_init[,2], FEMbasis = FEMbasis)

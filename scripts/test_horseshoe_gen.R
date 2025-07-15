@@ -30,26 +30,26 @@ output_dir <- "data/horseshoe"
 write.csv(mesh$nodes, file.path(output_dir,"mesh_vertices.csv"))
 write.csv(mesh$triangles, file.path(output_dir, "mesh_elements.csv"))
 write.csv(mesh$nodesmarker, file.path(output_dir, "mesh_boundary.csv"))
-write.csv(gaussian_data, file.path(output_dir, "sample.csv"))
+write.csv(data, file.path(output_dir, "sample.csv"))
 
 # Calculate f_init
-lambda_proposal <- 10^seq(from = -1, to = -5, by = -0.5)
+lambda_proposal <- 10^seq(from = -1, to = -5, by = -1)
 
 de <- DE.FEM(
-	data = gaussian_data,
+	data = data,
 	FEMbasis = FEMbasis,
-	lambda <- lambda_proposal,
+	lambda <- 0.01,
 	nfolds = 10,
 	tol1 = 1e-4,
-	nsimulations = 1000,
-	preprocess_method = "RightCV",
+	nsimulations = 500,
+	# preprocess_method = "RightCV",
 	step_method = "Wolfe_Method",
 	direction_method = "L-BFGS10"
 )
 
 best_lambda_id <- match(de$lambda, lambda_proposal)
 
-write.csv(de$f_init[,best_lambda_id], file.path(output_dir, "f_init.csv"))
+write.csv(de$f_init, file.path(output_dir, "f_init.csv"))
 
 # Calculate the true density function
 true_density <- dens.func.1(mesh$nodes)

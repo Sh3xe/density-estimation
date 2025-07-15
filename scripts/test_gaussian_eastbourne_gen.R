@@ -1,33 +1,29 @@
 library(fdaPDE)
 rm(list = ls())
-directory <- "data/kent_sphere"
+directory <- "data/gaussian_eastbourne"
 
 # Import helper functions to sample and visualize data
 source("scripts/helper_functions_data.R")
 source("scripts/helper_functions_plot.R")
 
 # Define the domain
-vertices <- read.table(file.path(directory, "mesh_vertices.txt" ), quote = "\"", comment.char = "")
-triangles <- read.table(file.path(directory, "mesh_triangles.txt" ), quote = "\"", comment.char = "")
-
-# Create a regular mesh of the unit square
-mesh <- create.mesh.2.5D(nodes = vertices[,1:3], triangles = triangles[,1:3])
-mesh$nodesmarker[mesh$nodesmarker == TRUE] = 1
-mesh$nodesmarker[mesh$nodesmarker == FALSE] = 0
+mesh = mesh.5()
+mesh_linnet = as.linnet(mesh)
+mesh$nodesmarkers[mesh$nodesmarkers == TRUE] <- 1
+mesh$nodesmarkers[mesh$nodesmarkers == FALSE] <- 0
 
 # Set up the finite element basis
 FEMbasis <- create.FEM.basis(mesh = mesh)
 
-# Generate the test data
-n <- 1000
-data <- generate.spatial.data.3(N = n)
+# Generate the data
+pp <- rpoislpp(lambda = intens.func.5, L = mesh_linnet, sigma = 0.2)
+data <- cbind(pp$data$x, pp$data$y)
 
 # Save the mesh and samples
-directory <- "data/kent_sphere"
 
 write.csv(mesh$nodes, file.path(directory,"mesh_vertices.csv"))
-write.csv(mesh$triangles, file.path(directory, "mesh_elements.csv"))
 write.csv(mesh$nodesmarker, file.path(directory, "mesh_boundary.csv"))
+write.csv(mesh$edges, file.path(directory, "mesh_edges.csv"))
 write.csv(data, file.path(directory, "sample.csv"))
 
 # Calculate f_init
@@ -48,6 +44,16 @@ best_lambda_id <- match(de$lambda, lambda_proposal)
 
 write.csv(de$f_init[,best_lambda_id], file.path(directory, "f_init.csv"))
 
+mesh.eval <- refine.mesh.1.5D(mesh = mesh, delta = 0.05)
+mesh.eval_linnet <- as.linnet(mesh.eval)
+FEMbasis.eval <- create.FEM.basis(mesh = mesh.eval)
+
 # Calculate the true density function
-true_density <- dens.func.3(data = mesh$nodes)
+true_density <- intens.func.5(
+	x = mesh.eval$nodes[,1],
+	y = mesh.eval$nodes[,2],
+	L = mesh.eval_linnet, sigma = 0.2
+) / integral.dens.func.5(f = FEMbasis)
+
+
 write.csv(true_density, file.path(directory, "true_density.csv"))

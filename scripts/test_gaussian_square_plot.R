@@ -6,7 +6,7 @@ rm(list = ls())
 source("scripts/helper_functions_plot.R")
 source("scripts/helper_functions_data.R")
 
-data_dir <- "data/gaussian_2d"
+data_dir <- "data/gaussian_square"
 nodes <- read.csv(file.path(data_dir,"mesh_vertices.csv"))[,c(2,3)]
 triangles <- read.csv(file.path(data_dir, "mesh_elements.csv"))[,c(2,3,4)]
 nodesmarker <- read.csv(file.path(data_dir, "mesh_boundary.csv"))[,2]
@@ -19,7 +19,7 @@ FEMbasis <- create.FEM.basis(mesh = mesh)
 # Load the data
 f_init <- read.csv(file.path(data_dir, "f_init.csv"))
 sample <- read.csv(file.path(data_dir, "sample.csv"))
-log_dens <- read.csv(file.path(data_dir, "log_dens.csv"))
+log_dens <- read.csv(file.path("outputs/infections_log_dens_out.csv"))
 
 # Plot
 par(mfrow = c(1,2), mai = c(0.5,0.25,0.5,0.5))

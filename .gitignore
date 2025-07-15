@@ -4,3 +4,5 @@ build
 .Rhistory
 outputs
 out_*
+docker_cmd
+data/sim*.txt

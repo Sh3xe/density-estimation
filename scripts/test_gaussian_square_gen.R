@@ -22,7 +22,7 @@ N <- 1000
 gaussian_data <- generate.spatial.data.1(N)
 
 # Save the mesh and samples
-directory <- "data/gaussian_2d"
+directory <- "data/gaussian_square"
 
 write.csv(mesh$nodes, file.path(directory,"mesh_vertices.csv"))
 write.csv(mesh$triangles, file.path(directory, "mesh_elements.csv"))

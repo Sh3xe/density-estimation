@@ -4,6 +4,6 @@
 	branch = develop
 
 [submodule "fdaPDE-core"]
-	path = fdaPDE-cpp/fdaPDE/core
-	url = git@github.com:Sh3xe/fdaPDE-core.git 
+	path = fdaPDE-core
+	url = git@github.com:Sh3xe/fdaPDE-core.git
 	branch = develop

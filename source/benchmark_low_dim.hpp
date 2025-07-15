@@ -60,7 +60,6 @@ struct Rosenbrock {
 	Rosenbrock() = default;
 
 	static vector_t argmin(int dim) {
-		fdapde_assert(dim == 2);
 		return vector_t::Constant(dim, 1, 1.0);
 	}
 
@@ -156,14 +155,14 @@ template <typename OptimizerType>
 std::vector<LowDimBenchmarkResult> benchmark_optimizer(OptimizerType &opt, const std::string &title) {
 
 	// Optimization functions and their init point
-	ScalarField<Dynamic, SchafferF6>     schaffer_f6(2);
-	ScalarField<Dynamic, Schwefel>       schwefel_2d(2);
-	ScalarField<Dynamic, Schwefel>       schwefel_10d(10);
-	ScalarField<Dynamic, Sphere>         sphere_2d(2);
-	ScalarField<Dynamic, Sphere>         sphere_30d(30);
-	ScalarField<Dynamic, Rastrigin>      rastrigin_30d(30);
-	ScalarField<Dynamic, Rastrigin>      rastrigin_2d(2);
-	ScalarField<Dynamic, Rosenbrock>     rosenbrock(2);
+	fdapde::ScalarField<fdapde::Dynamic, SchafferF6>     schaffer_f6(2);
+	fdapde::ScalarField<fdapde::Dynamic, Schwefel>       schwefel_2d(2);
+	fdapde::ScalarField<fdapde::Dynamic, Schwefel>       schwefel_10d(10);
+	fdapde::ScalarField<fdapde::Dynamic, Sphere>         sphere_2d(2);
+	fdapde::ScalarField<fdapde::Dynamic, Sphere>         sphere_30d(30);
+	fdapde::ScalarField<fdapde::Dynamic, Rastrigin>      rastrigin_30d(30);
+	fdapde::ScalarField<fdapde::Dynamic, Rastrigin>      rastrigin_2d(2);
+	fdapde::ScalarField<fdapde::Dynamic, Rosenbrock>     rosenbrock(2);
 	
 	// Initial points
 	vector_t init_1 = vector_t::Constant(2, 1, 1.0);
