@@ -6,7 +6,7 @@ add_executable( advanced_optim_applic
 	source/main.cpp
 	source/benchmark_low_dim.cpp
 	source/utilities.cpp
-	# source/benchmark_de.cpp
+	source/benchmark_de.cpp
 )
 
 target_compile_features( advanced_optim_applic PUBLIC cxx_std_20)
