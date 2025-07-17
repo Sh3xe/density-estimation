@@ -134,13 +134,8 @@ DEBenchmarkResult benchmark_one(
 	return res;
 }
 
-template <typename DETestScenarioType, typename...>
-std::vector<DEBenchmarkResult> benchmark_all_opt(const DETestScenarioType &scenario) {
-	return {};
-}
-
-template <typename DETestScenarioType, typename ...NamedOptimizers>
-std::vector<DEBenchmarkResult> benchmark_all_opt(DETestScenarioType &scenario, NamedOptimizers &...optimizers) {
+template <typename DETestScenarioType>
+std::vector<DEBenchmarkResult> benchmark_all_opt(DETestScenarioType &scenario) {
 	// Create solver
 	FeSpace Vh(scenario.discretization, P1<1>);
 	TrialFunction f(Vh);
@@ -153,14 +148,17 @@ std::vector<DEBenchmarkResult> benchmark_all_opt(DETestScenarioType &scenario, N
 	// Benchmark one optimizer
 	std::vector<DEBenchmarkResult> results;
 
-	// Use a fold expression to iterate over each optimizer in the parameter pack
-	(void)(std::initializer_list<int>{
-			([&] {
-					auto& [opt_name, optimizer] = optimizers;
-					DEBenchmarkResult benchmark_res = benchmark_one(optimizer, solver, scenario, opt_name);
-					results.push_back(benchmark_res);
-			}(), 0)...
-	});
+	auto lbfgs30 = LBFGS<Eigen::Dynamic, WolfeLineSearch> {MAX_ITERATIONS, 30, ERR_TOL, STEP_SIZE};
+	auto grad_descent = GradientDescent<Eigen::Dynamic, WolfeLineSearch> {MAX_ITERATIONS, ERR_TOL, STEP_SIZE};
+	// auto cg_pr = ConjugateGradient<Eigen::Dynamic, WolfeLineSearch> {MAX_ITERATIONS, ERR_TOL, STEP_SIZE, true});
+	// auto cg_fr = ConjugateGradient<Eigen::Dynamic, WolfeLineSearch> {MAX_ITERATIONS, ERR_TOL, STEP_SIZE, false});
+	// auto nelder_mead = NelderMead<Eigen::Dynamic> {ERR_TOL, STEP_SIZE});
+
+	results.push_back(benchmark_one(lbfgs30, solver, scenario, "lbfgs30"));
+	results.push_back(benchmark_one(grad_descent, solver, scenario, "grad_descent"));
+	// results.push_back(benchmark_one(cg_pr, solver, scenario, "cg_pr"));
+	// results.push_back(benchmark_one(cg_fr, solver, scenario, "cg_fr"));
+	// results.push_back(benchmark_one(nelder_mead, solver, scenario, "nelder_mead"));
 
 	return results;
 }

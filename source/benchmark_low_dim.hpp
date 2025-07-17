@@ -20,13 +20,13 @@ public:
 struct SchafferF6 {
 	SchafferF6() = default;
 
-	static vector_t argmin(int dim) {
-		return vector_t::Zero(dim, 1);
+	static Eigen::VectorXd argmin(int dim) {
+		return Eigen::VectorXd::Zero(dim, 1);
 	}
 
 	static double min() { return 0.0; }
 
-	double operator()(const vector_t& x) const {
+	double operator()(const Eigen::VectorXd& x) const {
 		double r = x.dot(x);
 		double a = std::sin(std::sqrt(r));
 		double b = 1.0 + 0.001 * r;
@@ -37,13 +37,13 @@ struct SchafferF6 {
 struct Schwefel {
 	Schwefel() = default;
 
-	static vector_t argmin(int dim) {
-		return vector_t::Constant(dim, 1, 420.9687);
+	static Eigen::VectorXd argmin(int dim) {
+		return Eigen::VectorXd::Constant(dim, 1, 420.9687);
 	}
 
 	static double min() { return 0.0; }
 
-	double operator()(const vector_t& x) const {
+	double operator()(const Eigen::VectorXd& x) const {
 		double s = 0.0;
 		for(int i = 0; i < x.rows(); ++i) {
 			if(x[i] > 500 || x[i] < -500)
@@ -59,13 +59,13 @@ struct Schwefel {
 struct Rosenbrock {
 	Rosenbrock() = default;
 
-	static vector_t argmin(int dim) {
-		return vector_t::Constant(dim, 1, 1.0);
+	static Eigen::VectorXd argmin(int dim) {
+		return Eigen::VectorXd::Constant(dim, 1, 1.0);
 	}
 
 	static double min() { return 0.0; }
 
-	double operator()(const vector_t& x) const {
+	double operator()(const Eigen::VectorXd& x) const {
 		constexpr double a = 1.0;
 		constexpr double b = 100.0;
 		return (a-x[0])*(a-x[0]) + b*(x[1]-x[0]*x[0])*(x[1]-x[0]*x[0]);
@@ -75,13 +75,13 @@ struct Rosenbrock {
 struct Rastrigin {
 	Rastrigin() = default;
 
-	static vector_t argmin(int dim) {
-		return vector_t::Zero(dim, 1);
+	static Eigen::VectorXd argmin(int dim) {
+		return Eigen::VectorXd::Zero(dim, 1);
 	}
 
 	static double min() { return 0.0; }
 
-	double operator()(const vector_t& x) const {
+	double operator()(const Eigen::VectorXd& x) const {
 		double s = 0.0;
 		for(int i = 0; i < x.rows(); ++i) {
 			if(x[i] > 5.12 || x[i] < -5.12)
@@ -97,13 +97,13 @@ struct Rastrigin {
 struct Sphere {
 	Sphere() = default;
 
-	static vector_t argmin(int dim) {
-		return vector_t::Zero(dim, 1);
+	static Eigen::VectorXd argmin(int dim) {
+		return Eigen::VectorXd::Zero(dim, 1);
 	}
 
 	static double min() { return 0.0; }
 
-	double operator()(const vector_t& x) const {
+	double operator()(const Eigen::VectorXd& x) const {
 		return x.dot(x);
 	}
 };
@@ -112,9 +112,9 @@ struct LowDimBenchmarkResult {
 	std::string title;
 	microsec duration;
 	double real_min;
-	vector_t real_argmin;
+	Eigen::VectorXd real_argmin;
 	double opt_min;
-	vector_t opt_argmin;
+	Eigen::VectorXd opt_argmin;
 	size_t iterations;
 };
 
@@ -127,8 +127,8 @@ template<
 LowDimBenchmarkResult benchmark_function(
 	Optimizer &opt,
 	FieldFunc &func,
-	const vector_t &init_pt,
-	vector_t real_argmin,
+	const Eigen::VectorXd &init_pt,
+	Eigen::VectorXd real_argmin,
 	double real_min,
 	const std::string &name
 ) {
@@ -165,10 +165,10 @@ std::vector<LowDimBenchmarkResult> benchmark_optimizer(OptimizerType &opt, const
 	fdapde::ScalarField<fdapde::Dynamic, Rosenbrock>     rosenbrock(2);
 	
 	// Initial points
-	vector_t init_1 = vector_t::Constant(2, 1, 1.0);
-	vector_t init_2 = vector_t::Constant(10, 1, 1.0);
-	vector_t init_3 = vector_t::Constant(30, 1, 1.0);
-	vector_t init_4 (2);
+	Eigen::VectorXd init_1 = Eigen::VectorXd::Constant(2, 1, 1.0);
+	Eigen::VectorXd init_2 = Eigen::VectorXd::Constant(10, 1, 1.0);
+	Eigen::VectorXd init_3 = Eigen::VectorXd::Constant(30, 1, 1.0);
+	Eigen::VectorXd init_4 (2);
 	init_4 << -1.2, 1;
 
 	// Benchmark the method on different functions and print the result to markdown in the standard output
