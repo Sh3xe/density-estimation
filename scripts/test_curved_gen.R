@@ -16,7 +16,6 @@ mesh <- create.mesh.2.5D(nodes = vertices[,1:3], triangles = triangles[,1:3])
 # Set up the finite element basis
 FEMbasis <- create.FEM.basis(mesh = mesh)
 
-
 # Generate the data
 n <- 1000
 data <- generate.spatial.data.4(N = n, mesh = mesh)
