@@ -1,7 +1,3 @@
-[submodule "fdaPDE-core"]
-	path = fdaPDE-core
-	url = git@github.com:fdaPDE/fdaPDE-core.git
-	branch = stable
 [submodule "fdaPDE-cpp"]
 	path = fdaPDE-cpp
 	url = git@github.com:fdaPDE/fdaPDE-cpp.git

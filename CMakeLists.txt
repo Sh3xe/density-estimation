@@ -3,12 +3,13 @@ cmake_minimum_required(VERSION 3.14)
 project(advanced_optim_applic)
 
 add_executable( advanced_optim_applic
-	source/benchmark.cpp
+	source/main.cpp
+	source/benchmark_low_dim.cpp
 )
 
 configure_file(
-    ${CMAKE_SOURCE_DIR}/source/_configuration/cmake_defines.hpp.in
-    ${CMAKE_SOURCE_DIR}/source/cmake_defines.hpp )
+	${CMAKE_SOURCE_DIR}/source/_configuration/cmake_defines.hpp.in
+	${CMAKE_SOURCE_DIR}/source/cmake_defines.hpp )
 
 target_compile_features( advanced_optim_applic PUBLIC cxx_std_20 )
 
@@ -21,4 +22,4 @@ find_package (Eigen3 3.3 REQUIRED NO_MODULE)
  
 target_link_libraries(advanced_optim_applic Eigen3::Eigen)
 
-target_precompile_headers(advanced_optim_applic PUBLIC source/pch.hpp)
+# target_precompile_headers(advanced_optim_applic PUBLIC source/pch.hpp)

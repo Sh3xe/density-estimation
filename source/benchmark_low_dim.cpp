@@ -1,4 +1,5 @@
 #include "benchmark_low_dim.hpp"
+using namespace lowdim;
 
 void print_performances( const LowDimBenchmarkResult &result ) {
 	// print a markdown table, to be exported to pdf for better visibility

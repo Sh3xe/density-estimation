@@ -6,16 +6,7 @@
 
 #include "utilities.hpp"
 
-class PrintValues {
-public:
-	PrintValues() = default;
-	
-	template <typename Opt, typename Obj> bool pre_update_step(Opt& opt, Obj& obj) {
-		std::cout << "----- NEW ITERATION -----" << std::endl;
-		std::cout << opt.x_old << std::endl;
-		return false;
-	}
-};
+namespace lowdim {
 
 struct SchafferF6 {
 	SchafferF6() = default;
@@ -264,3 +255,5 @@ void print_optim_benchmark(OptimizerType &opt, const std::string &title) {
 		print_performances(result);
 	}
 }
+
+} // namespace lowdim

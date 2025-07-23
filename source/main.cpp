@@ -1,4 +1,4 @@
-#include "benchmark_de.hpp"
+#include "benchmark_low_dim.hpp"
 
 int main() {
 	full_benchmark();
