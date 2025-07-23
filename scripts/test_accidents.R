@@ -1,9 +1,11 @@
 library(fdaPDE)
+library(viridis)
 rm(list = ls())
 directory <- "data/accidents_bergamo"
 
 # Import helper functions to sample and visualize data
 source("scripts/helper_functions_data.R")
+source("scripts/helper_functions_plot.R")
 
 # Define the domain
 load(file = file.path(directory, "domain.RData"))

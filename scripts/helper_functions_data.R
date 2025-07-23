@@ -345,7 +345,7 @@ generate.spatial.data.3 <- function(N, density.function = dens.func){
 ### 2.2 SIMULATION STUDY ON A CURVED SURFACE -----------------------------------
 # Sample N points uniformly
 sample.uniform.4 <- function(N){
-  load("data/sim4.fullPoints.proj.RData")
+  load("data/curved/data.RData")
   numFullPoints = nrow(fullPoints.proj)
   unifPointsIndex = sample(1:numFullPoints, N)
   unifPoints = fullPoints.proj[unifPointsIndex,]
@@ -404,7 +404,7 @@ generate.spatial.data.4 <- function(N, mesh){
     data = data[1:N,]
     
     # Export data
-    write.table(data, paste0("data/","sim4_",N,"data.txt"), row.names = F, col.names = F)
+    write.table(data, paste0("data/curved","sim4_",N,"data.txt"), row.names = F, col.names = F)
     
   } else {
     

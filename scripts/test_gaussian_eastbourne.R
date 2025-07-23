@@ -1,4 +1,5 @@
 library(fdaPDE)
+library(viridis)
 rm(list = ls())
 directory <- "data/gaussian_eastbourne"
 
@@ -20,7 +21,6 @@ pp <- rpoislpp(lambda = intens.func.5, L = mesh_linnet, sigma = 0.2)
 data <- cbind(pp$data$x, pp$data$y)
 
 # Save the mesh and samples
-
 write.csv(mesh$nodes, file.path(directory,"mesh_vertices.csv"))
 write.csv(mesh$nodesmarker, file.path(directory, "mesh_boundary.csv"))
 write.csv(mesh$edges, file.path(directory, "mesh_edges.csv"))
@@ -57,3 +57,26 @@ true_density <- intens.func.5(
 
 
 write.csv(true_density, file.path(directory, "true_density.csv"))
+
+plot.sample.1.5D(data = data, mesh = mesh, linewidth = 1.5)
+
+
+# Plot
+FEMfunction <- FEM(coeff = de$g, FEMbasis = FEMbasis)
+
+mesh.eval <- refine.mesh.1.5D(mesh = mesh, delta = 0.05)
+mesh.eval_linnet <- as.linnet(mesh.eval)
+FEMbasis.eval <- create.FEM.basis(mesh = mesh.eval)
+
+evaluation <- eval.FEM(FEM = FEMfunction, locations = mesh.eval$nodes)
+estimated_density <- exp(evaluation)
+
+# True density
+true_density <- intens.func.5(x = mesh.eval$nodes[,1], y = mesh.eval$nodes[,2],
+                              L = mesh.eval_linnet, sigma = 0.2) / integral.dens.func.5(f = FEMbasis)
+
+# Plot
+plot.density.1.5D(coeff = true_density, mesh = mesh.eval, colorscale = "jet.col",
+                  linewidth = 1.5) +
+plot.density.1.5D(coeff = estimated_density, mesh = mesh.eval, colorscale = "jet.col",
+                  linewidth = 1.5)

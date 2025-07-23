@@ -38,6 +38,8 @@ struct DEBenchmarkResult {
 template <typename SpaceTriangulation>
 struct DETestScenario {
 
+	static constexpr int embed_dim = SpaceTriangulation::embed_dim;
+
 	std::string title;
 	Eigen::MatrixXd dataset;
 	Eigen::VectorXd g_init;
@@ -71,6 +73,8 @@ std::pair< Eigen::MatrixXd, Eigen::MatrixXd > split_dataset( const Eigen::Matrix
 std::string file_name( const std::string &test_directory, const std::string &optimizer );
 
 DETestScenario<Triangulation<2, 2>> load_test_2d(const std::string &dir_name);
+
+DETestScenario<Triangulation<2, 3>> load_test_2_5d(const std::string &dir_name);
 
 DETestScenario<Triangulation<1, 1>> load_test_snp500(const std::string &dir_name);
 
@@ -110,7 +114,7 @@ DEBenchmarkResult benchmark_one(
 	// 	// TODO: How to compute the log likelyhood given the space discretization and the log-density ?
 	// }
 
-	res.lambda = 0.002; // TODO: find the best lambda value
+	res.lambda = 0.02; // TODO: find the best lambda value
 	// res.cv_error /= static_cast<double>(CV_K);
 	// res.avg_cv_duration /= static_cast<double>(CV_K);
 	
@@ -141,21 +145,24 @@ std::vector<DEBenchmarkResult> benchmark_all_opt(DETestScenarioType &scenario) {
 	TrialFunction f(Vh);
 	TestFunction  v(Vh);
 	auto a = integral(scenario.discretization)(dot(grad(f), grad(v)));
-	ZeroField<2> u;
+	ZeroField<DETestScenarioType::embed_dim> u;
 	auto F = integral(scenario.discretization)(u * v);
 	auto solver = fe_de_elliptic(a, F);
 
 	// Benchmark one optimizer
 	std::vector<DEBenchmarkResult> results;
 
-	auto lbfgs30 = LBFGS<Eigen::Dynamic, WolfeLineSearch> {MAX_ITERATIONS, 30, ERR_TOL, STEP_SIZE};
+	auto lbfgs30 = LBFGS<Eigen::Dynamic, WolfeLineSearch> {MAX_ITERATIONS, ERR_TOL, STEP_SIZE, 30};
 	auto grad_descent = GradientDescent<Eigen::Dynamic, WolfeLineSearch> {MAX_ITERATIONS, ERR_TOL, STEP_SIZE};
-	// auto cg_pr = ConjugateGradient<Eigen::Dynamic, WolfeLineSearch> {MAX_ITERATIONS, ERR_TOL, STEP_SIZE, true});
-	// auto cg_fr = ConjugateGradient<Eigen::Dynamic, WolfeLineSearch> {MAX_ITERATIONS, ERR_TOL, STEP_SIZE, false});
+	// auto cg_pr = ConjugateGradient<Eigen::Dynamic, WolfeLineSearchNew> {MAX_ITERATIONS, ERR_TOL, STEP_SIZE, true});
+	// auto cg_fr = ConjugateGradient<Eigen::Dynamic, WolfeLineSearchNew> {MAX_ITERATIONS, ERR_TOL, STEP_SIZE, false});
 	// auto nelder_mead = NelderMead<Eigen::Dynamic> {ERR_TOL, STEP_SIZE});
 
+	std::cout << "Starting benchmark for " << scenario.title << std::endl;
 	results.push_back(benchmark_one(lbfgs30, solver, scenario, "lbfgs30"));
+	std::cout << scenario.title << ": lbfgs30 done" << std::endl;
 	results.push_back(benchmark_one(grad_descent, solver, scenario, "grad_descent"));
+	std::cout << scenario.title << ": grad_descent done" << std::endl;
 	// results.push_back(benchmark_one(cg_pr, solver, scenario, "cg_pr"));
 	// results.push_back(benchmark_one(cg_fr, solver, scenario, "cg_fr"));
 	// results.push_back(benchmark_one(nelder_mead, solver, scenario, "nelder_mead"));
