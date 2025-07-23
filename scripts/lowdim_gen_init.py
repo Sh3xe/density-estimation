@@ -5,23 +5,23 @@ DIR = "data/lowdim_inits/"
 NUM_INIT = 30
 
 def gen_schaffer_f6():
-	matrix = npr.random(size=(NUM_INIT, 2)) * 5
+	matrix = npr.normal(size=(NUM_INIT, 2)) * 5
 	np.savetxt(DIR + "schaffer_f6.csv", matrix, delimiter=',', fmt='%f')
 
 def gen_rosenbrock():
-	matrix = np.tile(np.array([-1.2, 1.0]), (NUM_INIT, 1)) + npr.random(size=(NUM_INIT, 2)) * 0.5
+	matrix = np.tile(np.array([-1.2, 1.0]), (NUM_INIT, 1)) + npr.normal(size=(NUM_INIT, 2)) * 0.5
 	np.savetxt(DIR + "rosenbrock.csv", matrix, delimiter=',', fmt='%f')
 
 def gen_sphere(dim: int):
-	matrix = npr.random(size=(NUM_INIT, dim)) * 1.0
+	matrix = npr.normal(size=(NUM_INIT, dim)) * 1.0
 	np.savetxt(DIR + f"{dim}_" + "sphere.csv", matrix, delimiter=',', fmt='%f')
 
 def gen_schwefel(dim: int):
-	matrix = npr.random(size=(NUM_INIT, dim)) * 20.0
+	matrix = npr.normal(size=(NUM_INIT, dim)) * 20.0
 	np.savetxt(DIR + f"{dim}_" + "schwefel.csv", matrix, delimiter=',', fmt='%f')
 
 def gen_rastrigin(dim: int):
-	matrix = npr.random(size=(NUM_INIT, dim)) * 5.0
+	matrix = npr.normal(size=(NUM_INIT, dim)) * 5.0
 	np.savetxt(DIR + f"{dim}_" + "rastrigin.csv", matrix, delimiter=',', fmt='%f')
 
 if __name__ == "__main__":

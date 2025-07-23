@@ -3,6 +3,10 @@ import pandas as pd
 from time import time_ns
 import scipy.optimize as opt
 
+MAX_ITER = 500
+TOL = 1e-5
+STEP = 1e-2
+
 def duration_to_str(duration: int) -> str:
 	if duration < 1e3:
 		return f"{int(duration)}ns"
@@ -49,43 +53,49 @@ def rastrigin(x: np.ndarray):
 
 def benchmark_problem(fun, initial_points, method, method_min, title):
 	if method == "L-BFGS-B":
-		options = {"maxiter": 500, "maxcor": 30}
+		options = {"maxiter": MAX_ITER, "maxcor": 30, "eps": STEP}
 	else:
-		options = {"maxiter": 500}
+		options = {"maxiter": MAX_ITER}
 
 	# optimize
-	time_begin = time_ns()
-	results = pd.DataFrame(columns=["nit", "x_diff", "f_diff", "p_id"])
+	results = pd.DataFrame(columns=["nit", "x_diff", "f_diff", "p_id", "duration_microsec"])
 	for i in range(len(initial_points)):
+		time_begin = time_ns()
 		res = opt.minimize(
 			fun=fun,
 			x0=initial_points[i],
 			method=method,
-			tol=1e-5,
+			tol=TOL,
 			options=options
 		)
+		duration = (time_ns() - time_begin) / len(initial_points)
 
 		results.loc[len(results)] = {
 			"nit": res.nit,
 			"x_diff": np.linalg.norm(res.x - method_min),
 			"f_diff": np.linalg.norm(res.fun),
-			"p_id": i
-		}
+			"p_id": i,
+			"duration_microsec": duration
+		}	
 
-	duration = (time_ns() - time_begin) / len(initial_points)
-
+	# Save benchmark as csv
+	results.to_csv(f"outputs/py_bmrk_{method}_{title}_{len(initial_points)}.csv")
+	# Print the result to a markdown table
 	nit = results["nit"].mean()
+	nit_std = results["nit"].std()
 	x_diff = results["x_diff"].mean()
 	x_diff_std = results["x_diff"].std()
 	f_diff = results["f_diff"].mean()
 	f_diff_std = results["f_diff"].std()
-	print(f"{title}| {nit:.4} | {x_diff:.2e} | {x_diff_std:.2e} | {f_diff:.2e} |  {f_diff_std:.2e}| {duration_to_str(duration)}")
+	duration = results["duration_microsec"].mean()
+	duration_std = results["duration_microsec"].std()
+	print(f"{title}|{nit:.4}|{nit_std:.4}|{x_diff:.2e}|{x_diff_std:.2e}|{f_diff:.2e}|{f_diff_std:.2e}|{duration_to_str(duration)}|{duration_to_str(duration_std)}")
 
 def test_method(method):
 
 	print(f"### `{method}`\n")
-	print("|Method|Iterations| x_diff | x_diff_std | f_diff | f_diff_std | time |")
-	print("|-|-|-|-|-|-|-|")
+	print("| Method | n_iter_mean | n_iter_std | x_diff_mean | x_diff_std | f_diff_mean | f_diff_std | duration_mean | duration_std ")
+	print("|-|-|-|-|-|-|-|-|-|")
 
 	init_sphere_2d = np.loadtxt("data/lowdim_inits/2_sphere.csv", delimiter=",")
 	benchmark_problem(sphere, init_sphere_2d, method, np.zeros(2), "Sphere 2D")
@@ -100,7 +110,6 @@ def test_method(method):
 	benchmark_problem(schwefel, init_schwefel_10d, method, np.ones(10) * 420.9687, "Schwefel 10D")
 	init_schwefel_30d = np.loadtxt("data/lowdim_inits/30_schwefel.csv", delimiter=",")
 	benchmark_problem(schwefel, init_schwefel_30d, method, np.ones(30) * 420.9687, "Schwefel 30D")
-
 
 	init_rastrigin_2d = np.loadtxt("data/lowdim_inits/2_rastrigin.csv", delimiter=",")
 	benchmark_problem(rastrigin, init_rastrigin_2d, method, np.zeros(2), "Rastrigin 2D")

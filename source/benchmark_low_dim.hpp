@@ -1,12 +1,12 @@
 #pragma once
 
 #include <fdaPDE/optimization.h>
-#include <chrono>
 #include <Eigen/Dense>
-
 #include "utilities.hpp"
 
 namespace lowdim {
+
+// Test functions
 
 struct SchafferF6 {
 	SchafferF6() = default;
@@ -99,161 +99,172 @@ struct Sphere {
 	}
 };
 
-struct LowDimBenchmarkResult {
+// Benchmark result
+
+struct BenchmarkResult {
 	std::string title;
 	microsec duration;
-	double real_min;
-	Eigen::VectorXd real_argmin;
-	double opt_min;
-	Eigen::VectorXd opt_argmin;
-	size_t iterations;
+	microsec duration_std;
+	double x_diff_mean;
+	double x_diff_std;
+	double f_diff_mean;
+	double f_diff_std;
+	double nit_mean;
+	double nit_std;
 };
 
-void print_performances( const LowDimBenchmarkResult &result );
+// Utils (printing &optimizing)
+
+void print_optim_benchmark(const std::vector<BenchmarkResult> &res, const std::string &title, std::ostream &os);
+
+void print_performances( const BenchmarkResult &result, std::ostream &os );
+
+void full_benchmark();
+
+// Optimization benchmark
 
 template<
 	typename Optimizer,
 	typename FieldFunc
 >
-LowDimBenchmarkResult benchmark_function(
+BenchmarkResult benchmark_function(
 	Optimizer &opt,
 	FieldFunc &func,
-	const Eigen::VectorXd &init_pt,
+	const Eigen::MatrixXd &init_pts,
 	Eigen::VectorXd real_argmin,
 	double real_min,
-	const std::string &name
+	const std::string &title,
+	const std::string &opt_title
 ) {
-	auto begin_time = std::chrono::high_resolution_clock::now();
-	
-	for(int i = 0; i < 100; ++i) {
-		opt.optimize(func, init_pt);
+	// [nit, x_diff, f_diff, p_id, duration_microsec]
+	Eigen::MatrixXd df = Eigen::MatrixXd::Zero(init_pts.rows(), 5);
+
+	for(int i = 0; i < init_pts.rows(); ++i) {
+		// Perform benchmark on one initial point
+		auto begin_time = std::chrono::high_resolution_clock::now();
+		if constexpr ( fdapde::is_gradient_based_opt_v<Optimizer> ) {
+			opt.optimize(func, init_pts.row(i), fdapde::WolfeLineSearch());
+		} else {
+			opt.optimize(func, init_pts.row(i));
+		}
+		// opt.optimize(func, init_pts.row(i));
+		auto end_time = std::chrono::high_resolution_clock::now();
+		double duration = microsec(end_time - begin_time).count();
+
+		// Save the results to csv
+		df(i, 0) = (double)opt.n_iter();
+		df(i, 1) = (real_argmin - opt.optimum()).norm();
+		df(i, 2) = std::abs(real_min - opt.value());
+		df(i, 3) = (double)i;
+		df(i, 4) = duration;
 	}
-	auto end_time = std::chrono::high_resolution_clock::now();
-	double duration = microsec(end_time - begin_time).count();
-	
-	LowDimBenchmarkResult res;
-	res.title = name;
-	res.duration = microsec(duration / 100.0);
-	res.real_argmin = real_argmin;
-	res.real_min = real_min;
-	res.opt_min = opt.value();
-	res.iterations = opt.n_iter();
-	res.opt_argmin = opt.optimum();
+
+	std::string file_title = "outputs/cpp_bmrk_" + opt_title + "_" + title + "_" + std::to_string(init_pts.rows()) + "d.csv";
+	utils::write_csv(
+		file_title,
+		{"nit","x_diff","f_diff","p_id","duration_microsec"},
+		df
+	);
+
+	BenchmarkResult res;
+	res.title = title;
+	res.nit_mean = utils::mean(df, 0);
+	res.nit_std = utils::std(df, 0);
+	res.x_diff_mean = utils::mean(df, 1);
+	res.x_diff_std = utils::std(df, 1);
+	res.f_diff_mean = utils::mean(df, 2);
+	res.f_diff_std = utils::std(df, 2);
+	res.duration = microsec(utils::mean(df, 4));
+	res.duration_std = microsec(utils::std(df, 4));
+
 	return res;
 }
 
-template <typename OptimizerType>
-std::vector<LowDimBenchmarkResult> benchmark_optimizer(OptimizerType &opt, const std::string &title) {
-
+template <typename OptimizerType, typename ...LineSearch>
+std::vector<BenchmarkResult> benchmark_optimizer(
+	OptimizerType &opt,
+	const std::string &title
+) {
 	// Optimization functions and their init point
-	fdapde::ScalarField<fdapde::Dynamic, SchafferF6>     schaffer_f6(2);
-	fdapde::ScalarField<fdapde::Dynamic, Schwefel>       schwefel_2d(2);
-	fdapde::ScalarField<fdapde::Dynamic, Schwefel>       schwefel_10d(10);
-	fdapde::ScalarField<fdapde::Dynamic, Sphere>         sphere_2d(2);
-	fdapde::ScalarField<fdapde::Dynamic, Sphere>         sphere_30d(30);
-	fdapde::ScalarField<fdapde::Dynamic, Rastrigin>      rastrigin_30d(30);
-	fdapde::ScalarField<fdapde::Dynamic, Rastrigin>      rastrigin_2d(2);
-	fdapde::ScalarField<fdapde::Dynamic, Rosenbrock>     rosenbrock(2);
+	fdapde::ScalarField<fdapde::Dynamic, SchafferF6> schaffer_f6(2);
+	fdapde::ScalarField<fdapde::Dynamic, Rosenbrock> rosenbrock(2);
+
+	fdapde::ScalarField<fdapde::Dynamic, Schwefel>   schwefel_2d(2);
+	fdapde::ScalarField<fdapde::Dynamic, Schwefel>   schwefel_10d(10);
+	fdapde::ScalarField<fdapde::Dynamic, Schwefel>   schwefel_30d(30);
+
+	fdapde::ScalarField<fdapde::Dynamic, Sphere>     sphere_2d(2);
+	fdapde::ScalarField<fdapde::Dynamic, Sphere>     sphere_10d(10);
+	fdapde::ScalarField<fdapde::Dynamic, Sphere>     sphere_30d(30);
 	
-	// Initial points
-	Eigen::VectorXd init_1 = Eigen::VectorXd::Constant(2, 1, 1.0);
-	Eigen::VectorXd init_2 = Eigen::VectorXd::Constant(10, 1, 1.0);
-	Eigen::VectorXd init_3 = Eigen::VectorXd::Constant(30, 1, 1.0);
-	Eigen::VectorXd init_4 (2);
-	init_4 << -1.2, 1;
+	fdapde::ScalarField<fdapde::Dynamic, Rastrigin>  rastrigin_2d(2);
+	fdapde::ScalarField<fdapde::Dynamic, Rastrigin>  rastrigin_10d(10);
+	fdapde::ScalarField<fdapde::Dynamic, Rastrigin>  rastrigin_30d(30);
 
 	// Benchmark the method on different functions and print the result to markdown in the standard output
-	std::vector<LowDimBenchmarkResult> res;
-	res.reserve(8);
+	std::vector<BenchmarkResult> res; res.reserve(11);
 
 	res.push_back(benchmark_function(
-		opt,
-		sphere_2d,
-		init_1, 
-		Sphere::argmin(2),
-		Sphere::min(),
-		"Sphere 2D"
+		opt, sphere_2d,
+		utils::load_csv("data/lowdim_inits/2_sphere.csv"), 
+		Sphere::argmin(2), Sphere::min(), "sphere_2d", title
+	));
+	res.push_back(benchmark_function(
+		opt, sphere_10d,
+		utils::load_csv("data/lowdim_inits/10_sphere.csv"), 
+		Sphere::argmin(10), Sphere::min(), "sphere_10d", title
+	));
+	res.push_back(benchmark_function(
+		opt, sphere_30d,
+		utils::load_csv("data/lowdim_inits/30_sphere.csv"), 
+		Sphere::argmin(30), Sphere::min(), "sphere_30d", title
 	));
 
 	res.push_back(benchmark_function(
-		opt,
-		sphere_30d,
-		init_3, 
-		Sphere::argmin(30),
-		Sphere::min(),
-		"Sphere 30D"
+		opt, schwefel_2d,
+		utils::load_csv("data/lowdim_inits/2_schwefel.csv"),
+		Schwefel::argmin(2), Schwefel::min(), "schwefel_2d", title
 	));
-
 	res.push_back(benchmark_function(
-		opt,
-		schwefel_2d,
-		init_1 * 20.0,
-		Schwefel::argmin(2),
-		Schwefel::min(),
-		"Schwefel 2D" 
+		opt, schwefel_10d,
+		utils::load_csv("data/lowdim_inits/10_schwefel.csv"),
+		Schwefel::argmin(10), Schwefel::min(), "schwefel_10d", title
+	));
+	res.push_back(benchmark_function(
+		opt, schwefel_30d,
+		utils::load_csv("data/lowdim_inits/30_schwefel.csv"),
+		Schwefel::argmin(30), Schwefel::min(), "schwefel_30d", title
 	));
 	
 	res.push_back(benchmark_function(
-		opt,
-		schwefel_10d,
-		init_2 * 20.0,
-		Schwefel::argmin(10),
-		Schwefel::min(),
-		"Schwefel 10D"
+		opt, rastrigin_2d,
+		utils::load_csv("data/lowdim_inits/2_rastrigin.csv"),
+		Rastrigin::argmin(2), Rastrigin::min(), "rastrigin_2d", title
+	));
+	res.push_back(benchmark_function(
+		opt, rastrigin_10d,
+		utils::load_csv("data/lowdim_inits/10_rastrigin.csv"),
+		Rastrigin::argmin(10), Rastrigin::min(), "rastrigin_10d", title
+	));
+	res.push_back(benchmark_function(
+		opt, rastrigin_30d,
+		utils::load_csv("data/lowdim_inits/30_rastrigin.csv"),
+		Rastrigin::argmin(30), Rastrigin::min(), "rastrigin_30d", title
 	));
 
 	res.push_back(benchmark_function(
-		opt,
-		rastrigin_2d,
-		init_1 * 3.0,
-		Rastrigin::argmin(2),
-		Rastrigin::min(),
-		"Rastrigin 2D"
+		opt, schaffer_f6,
+		utils::load_csv("data/lowdim_inits/schaffer_f6.csv"),
+		SchafferF6::argmin(2), SchafferF6::min(), "schaffer_f6", title
 	));
 
 	res.push_back(benchmark_function(
-		opt,
-		rastrigin_30d,
-		init_3 * 3.0,
-		Rastrigin::argmin(30),
-		Rastrigin::min(),
-		"Rastrigin 30D"
+		opt, rosenbrock,
+		utils::load_csv("data/lowdim_inits/rosenbrock.csv"), 
+		Rosenbrock::argmin(2),Rosenbrock::min(), "rosenbrock", title
 	));
-
-	res.push_back(benchmark_function(
-		opt,
-		schaffer_f6,
-		init_1 * 5.0,
-		SchafferF6::argmin(2),
-		SchafferF6::min(),
-		"Schaffer F6"
-	));
-
-	res.push_back(benchmark_function(
-		opt,
-		rosenbrock,
-		init_4, 
-		Rosenbrock::argmin(2),
-		Rosenbrock::min(),
-		"Rosenbrock 2D"
-	));
-
 
 	return res;
-}
-
-template <typename OptimizerType>
-void print_optim_benchmark(OptimizerType &opt, const std::string &title) {
-	// Markdown header
-	std::cout << "### `" << title << "`\n";
-	std::cout << "|Method|n_iter| x-x* l2 err | f-f* l2 err | time |" << std::endl;
-	std::cout << "|-|-|-|-|-|" << std::endl;
-
-	auto benchmark = benchmark_optimizer(opt, title);
-
-	for(const auto &result: benchmark) {
-		print_performances(result);
-	}
 }
 
 } // namespace lowdim

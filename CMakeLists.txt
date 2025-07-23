@@ -5,6 +5,7 @@ project(advanced_optim_applic)
 add_executable( advanced_optim_applic
 	source/main.cpp
 	source/benchmark_low_dim.cpp
+	source/utilities.cpp
 )
 
 configure_file(
@@ -16,6 +17,7 @@ target_compile_features( advanced_optim_applic PUBLIC cxx_std_20 )
 target_include_directories(advanced_optim_applic PUBLIC 
 	fdaPDE-cpp
 	fdaPDE-cpp/fdaPDE/core
+	rapidcsv
 )
 
 find_package (Eigen3 3.3 REQUIRED NO_MODULE)
