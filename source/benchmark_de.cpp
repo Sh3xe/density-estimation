@@ -30,7 +30,7 @@ std::string file_name(
 	ss << "outputs/" << optimizer << "_" << test_directory << "_log_density.csv";
 	return ss.str();
 }
-DETestScenario<Triangulation<2, 2>> load_test_2d(const std::string &dir_name) {
+TestScenario<Triangulation<2, 2>> load_test_2d(const std::string &dir_name) {
 	std::cout << "Loading 2D " << dir_name << std::endl;
 	// Geometry definition
 	auto dir = path("./data") / path(dir_name);
@@ -55,11 +55,11 @@ DETestScenario<Triangulation<2, 2>> load_test_2d(const std::string &dir_name) {
 
 	std::cout << "Done loading 2D " << dir_name << std::endl;
 	
-	return DETestScenario<Triangulation<2, 2>>(dir_name, std::move(dataset), std::move(g_init), std::move(space_discr) );
+	return TestScenario<Triangulation<2, 2>>(dir_name, std::move(dataset), std::move(g_init), std::move(space_discr) );
 }
 
 
-DETestScenario<Triangulation<2, 3>> load_test_2_5d(const std::string &dir_name) {
+TestScenario<Triangulation<2, 3>> load_test_2_5d(const std::string &dir_name) {
 	std::cout << "Loading 2.5D " << dir_name << std::endl;
 	// Geometry definition
 	auto dir = path("./data") / path(dir_name);
@@ -84,11 +84,11 @@ DETestScenario<Triangulation<2, 3>> load_test_2_5d(const std::string &dir_name) 
 
 	std::cout << "Done loading 2.5D " << dir_name << std::endl;
 	
-	return DETestScenario<Triangulation<2, 3>>(dir_name, std::move(dataset), std::move(g_init), std::move(space_discr) );
+	return TestScenario<Triangulation<2, 3>>(dir_name, std::move(dataset), std::move(g_init), std::move(space_discr) );
 }
 
 
-DETestScenario<Triangulation<1, 1>> load_test_snp500(const std::string &dir_name) {
+TestScenario<Triangulation<1, 1>> load_test_snp500(const std::string &dir_name) {
 // Geometry definition
 	auto dir = path("./data") / path(dir_name);
 
@@ -101,10 +101,10 @@ DETestScenario<Triangulation<1, 1>> load_test_snp500(const std::string &dir_name
 		read_csv<double>(dir / path("data_space.csv"))
 		.as_matrix();
 	
-	return DETestScenario<Triangulation<1, 1>>(dir_name, std::move(dataset), std::move(g_init), std::move(space_discr) );
+	return TestScenario<Triangulation<1, 1>>(dir_name, std::move(dataset), std::move(g_init), std::move(space_discr) );
 }
 
-void print_benchmark_md( const std::vector<DEBenchmarkResult> &benchmark, std::ostream &os ) {
+void print_benchmark_md( const std::vector<BenchmarkResult> &benchmark, std::ostream &os ) {
 	static std::mutex lock;
 
 	lock.lock();
@@ -121,9 +121,9 @@ void print_benchmark_md( const std::vector<DEBenchmarkResult> &benchmark, std::o
 	lock.unlock();
 }
 
-void save_log_densities( const std::vector<DEBenchmarkResult> &benchmark ) {
+void save_log_densities( const std::vector<BenchmarkResult> &benchmark ) {
 	auto output_dir = path("outputs");
-	for(const DEBenchmarkResult &res: benchmark) {
+	for(const BenchmarkResult &res: benchmark) {
 		std::string filename = output_dir / file_name(res.test_title, res.optimizer);
 		std::cout << "filename" << filename << std::endl;
 		write_csv(filename, res.log_density);

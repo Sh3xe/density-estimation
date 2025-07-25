@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.14)
 project(advanced_optim_applic)
 
 add_executable( advanced_optim_applic
+	# source/benchmark.cpp
 	source/main.cpp
 	source/benchmark_low_dim.cpp
 	source/utilities.cpp

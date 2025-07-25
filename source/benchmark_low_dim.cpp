@@ -2,6 +2,11 @@
 #include <iostream>
 #include <fstream>
 
+// #include <fdaPDE/src/optimization/callbacks_old.h>
+// #include <fdaPDE/src/optimization/conjugate_gradient_old.h>
+// #include <fdaPDE/src/optimization/wolfe_line_search_old.h>
+// #include <fdaPDE/src/optimization/nelder_mead_old.h>
+
 using namespace fdapde;
 
 static constexpr int MAX_ITER = 500;
@@ -49,27 +54,58 @@ void lowdim::full_benchmark() {
 		return;
 	}
 	file << std::scientific << std::setprecision(2);
-	std::cout << "Optimizing with lbfgs30" << std::endl;
-	LBFGS<Dynamic> lbfgs30 {MAX_ITER, TOL, STEP, 30};
-	auto lbfgs30_res = benchmark_optimizer(lbfgs30, "lbfgs30");
-	print_optim_benchmark(lbfgs30_res, "lbfgs30", file);
-	std::cout << "Done optimizing with lbfgs30" << std::endl;
 
-	std::cout << "Optimizing with cg_fr" << std::endl;
-	FletcherReevesCG<Dynamic> cg_fr {MAX_ITER, TOL, STEP};
-	auto cg_fr_res = benchmark_optimizer(cg_fr, "cg_fr");
-	print_optim_benchmark(cg_fr_res, "cg_fr", file);
-	std::cout << "Done ptimizing with cg_fr" << std::endl;
-	
-	std::cout << "Optimizing with cg_pr" << std::endl;
-	PolakRibiereCG<Dynamic> cg_pr {MAX_ITER, TOL, STEP};
-	auto cg_pr_res = benchmark_optimizer(cg_pr, "cg_pr");
-	print_optim_benchmark(cg_pr_res, "cg_pr", file);
-	std::cout << "Done ptimizing with cg_pr" << std::endl;
-	
-	std::cout << "Optimizing with nelder_mead" << std::endl;
-	NelderMead<Dynamic> nelder_mead {MAX_ITER, TOL};
-	auto nelder_mead_res = benchmark_optimizer(nelder_mead, "nelder_mead");
-	print_optim_benchmark(nelder_mead_res, "nelder_mead", file);
-	std::cout << "Done ptimizing with nelder_mead" << std::endl;
+	{
+		BFGS<Dynamic> bfgs {MAX_ITER, TOL, STEP};
+		auto bfgs_res = benchmark_optimizer(bfgs, "bfgs", WolfeLineSearch());
+		print_optim_benchmark(bfgs_res, "bfgs", file);
+	}
+
+	{
+		LBFGS<Dynamic> lbfgs30 {MAX_ITER, TOL, STEP, 30};
+		auto lbfgs30_res = benchmark_optimizer(lbfgs30, "lbfgs30", WolfeLineSearch());
+		print_optim_benchmark(lbfgs30_res, "lbfgs30", file);
+	}
+
+	{
+		FletcherReevesCG<Dynamic> cg_fr {MAX_ITER, TOL, STEP};
+		auto cg_fr_res = benchmark_optimizer(cg_fr, "cg_fr");
+		print_optim_benchmark(cg_fr_res, "cg_fr", file);
+	}
+		
+	{
+		PolakRibiereCG<Dynamic> cg_pr {MAX_ITER, TOL, STEP};
+		auto cg_pr_res = benchmark_optimizer(cg_pr, "cg_pr", WolfeLineSearch());
+		print_optim_benchmark(cg_pr_res, "cg_pr", file);
+	}
+
+	{
+		NelderMead<Dynamic> nelder_mead {MAX_ITER, TOL};
+		auto nelder_mead_res = benchmark_optimizer(nelder_mead, "nelder_mead");
+		print_optim_benchmark(nelder_mead_res, "nelder_mead", file);
+	}
+
+	{
+		GeneticOptim<Dynamic> genetic_bin_gaus {MAX_ITER, TOL, 5, 30};
+		auto genetic_bin_gaus_res = benchmark_optimizer(genetic_bin_gaus, "genetic_bin_gaus", BinaryTournamentSelection(), GaussianMutation());
+		print_optim_benchmark(genetic_bin_gaus_res, "genetic_bin_gaus", file);
+	}
+
+	{
+		GeneticOptim<Dynamic> genetic_bin_co {MAX_ITER, TOL, 5, 30};
+		auto genetic_bin_co_res = benchmark_optimizer(genetic_bin_co, "genetic_bin_co", BinaryTournamentSelection(), CrossoverMutation(), GaussianMutation());
+		print_optim_benchmark(genetic_bin_co_res, "genetic_bin_co", file);
+	}
+
+	{
+		GeneticOptim<Dynamic> genetic_rk_gaus {MAX_ITER, TOL, 5, 30};
+		auto genetic_rk_gaus_res = benchmark_optimizer(genetic_rk_gaus, "genetic_rk_gaus", RankSelection<Dynamic>(), GaussianMutation());
+		print_optim_benchmark(genetic_rk_gaus_res, "genetic_rk_gaus", file);
+	}
+
+	{
+		GeneticOptim<Dynamic> genetic_rk_co {MAX_ITER, TOL, 5, 30};
+		auto genetic_rk_co_res = benchmark_optimizer(genetic_rk_co, "genetic_rk_co", RankSelection<Dynamic>(), CrossoverMutation(), GaussianMutation());
+		print_optim_benchmark(genetic_rk_co_res, "genetic_rk_co", file);
+	}
 }

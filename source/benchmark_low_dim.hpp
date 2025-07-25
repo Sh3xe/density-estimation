@@ -125,7 +125,8 @@ void full_benchmark();
 
 template<
 	typename Optimizer,
-	typename FieldFunc
+	typename FieldFunc,
+	typename ...Hooks
 >
 BenchmarkResult benchmark_function(
 	Optimizer &opt,
@@ -134,7 +135,8 @@ BenchmarkResult benchmark_function(
 	Eigen::VectorXd real_argmin,
 	double real_min,
 	const std::string &title,
-	const std::string &opt_title
+	const std::string &opt_title,
+	Hooks &&...hooks
 ) {
 	// [nit, x_diff, f_diff, p_id, duration_microsec]
 	Eigen::MatrixXd df = Eigen::MatrixXd::Zero(init_pts.rows(), 5);
@@ -142,12 +144,7 @@ BenchmarkResult benchmark_function(
 	for(int i = 0; i < init_pts.rows(); ++i) {
 		// Perform benchmark on one initial point
 		auto begin_time = std::chrono::high_resolution_clock::now();
-		if constexpr ( fdapde::is_gradient_based_opt_v<Optimizer> ) {
-			opt.optimize(func, init_pts.row(i), fdapde::WolfeLineSearch());
-		} else {
-			opt.optimize(func, init_pts.row(i));
-		}
-		// opt.optimize(func, init_pts.row(i));
+		opt.optimize(func, init_pts.row(i), std::forward<Hooks>(hooks)...);
 		auto end_time = std::chrono::high_resolution_clock::now();
 		double duration = microsec(end_time - begin_time).count();
 
@@ -180,88 +177,62 @@ BenchmarkResult benchmark_function(
 	return res;
 }
 
-template <typename OptimizerType, typename ...LineSearch>
+template <typename OptimizerType, typename ...Hooks>
 std::vector<BenchmarkResult> benchmark_optimizer(
 	OptimizerType &opt,
-	const std::string &title
+	const std::string &title,
+	Hooks &&...hooks
 ) {
-	// Optimization functions and their init point
-	fdapde::ScalarField<fdapde::Dynamic, SchafferF6> schaffer_f6(2);
-	fdapde::ScalarField<fdapde::Dynamic, Rosenbrock> rosenbrock(2);
-
-	fdapde::ScalarField<fdapde::Dynamic, Schwefel>   schwefel_2d(2);
-	fdapde::ScalarField<fdapde::Dynamic, Schwefel>   schwefel_10d(10);
-	fdapde::ScalarField<fdapde::Dynamic, Schwefel>   schwefel_30d(30);
-
-	fdapde::ScalarField<fdapde::Dynamic, Sphere>     sphere_2d(2);
-	fdapde::ScalarField<fdapde::Dynamic, Sphere>     sphere_10d(10);
-	fdapde::ScalarField<fdapde::Dynamic, Sphere>     sphere_30d(30);
+	std::cout << "Benchmarking " << title << std::endl;
 	
-	fdapde::ScalarField<fdapde::Dynamic, Rastrigin>  rastrigin_2d(2);
-	fdapde::ScalarField<fdapde::Dynamic, Rastrigin>  rastrigin_10d(10);
-	fdapde::ScalarField<fdapde::Dynamic, Rastrigin>  rastrigin_30d(30);
-
 	// Benchmark the method on different functions and print the result to markdown in the standard output
+	std::vector<int> dims {2,10,30};
 	std::vector<BenchmarkResult> res; res.reserve(11);
 
-	res.push_back(benchmark_function(
-		opt, sphere_2d,
-		utils::load_csv("data/lowdim_inits/2_sphere.csv"), 
-		Sphere::argmin(2), Sphere::min(), "sphere_2d", title
-	));
-	res.push_back(benchmark_function(
-		opt, sphere_10d,
-		utils::load_csv("data/lowdim_inits/10_sphere.csv"), 
-		Sphere::argmin(10), Sphere::min(), "sphere_10d", title
-	));
-	res.push_back(benchmark_function(
-		opt, sphere_30d,
-		utils::load_csv("data/lowdim_inits/30_sphere.csv"), 
-		Sphere::argmin(30), Sphere::min(), "sphere_30d", title
-	));
+	for(auto &d: dims) {
+		fdapde::ScalarField<fdapde::Dynamic, Sphere> shpere_func(d);
+		res.push_back(benchmark_function(
+			opt, shpere_func,
+			utils::load_csv("data/lowdim_inits/" + std::to_string(d) + "_sphere.csv"), 
+			Sphere::argmin(d), Sphere::min(), "sphere_" + std::to_string(d) + "d", title,
+			std::forward<Hooks>(hooks)...
+		));
+	}
 
-	res.push_back(benchmark_function(
-		opt, schwefel_2d,
-		utils::load_csv("data/lowdim_inits/2_schwefel.csv"),
-		Schwefel::argmin(2), Schwefel::min(), "schwefel_2d", title
-	));
-	res.push_back(benchmark_function(
-		opt, schwefel_10d,
-		utils::load_csv("data/lowdim_inits/10_schwefel.csv"),
-		Schwefel::argmin(10), Schwefel::min(), "schwefel_10d", title
-	));
-	res.push_back(benchmark_function(
-		opt, schwefel_30d,
-		utils::load_csv("data/lowdim_inits/30_schwefel.csv"),
-		Schwefel::argmin(30), Schwefel::min(), "schwefel_30d", title
-	));
-	
-	res.push_back(benchmark_function(
-		opt, rastrigin_2d,
-		utils::load_csv("data/lowdim_inits/2_rastrigin.csv"),
-		Rastrigin::argmin(2), Rastrigin::min(), "rastrigin_2d", title
-	));
-	res.push_back(benchmark_function(
-		opt, rastrigin_10d,
-		utils::load_csv("data/lowdim_inits/10_rastrigin.csv"),
-		Rastrigin::argmin(10), Rastrigin::min(), "rastrigin_10d", title
-	));
-	res.push_back(benchmark_function(
-		opt, rastrigin_30d,
-		utils::load_csv("data/lowdim_inits/30_rastrigin.csv"),
-		Rastrigin::argmin(30), Rastrigin::min(), "rastrigin_30d", title
-	));
+	for(auto &d: dims) {
+		fdapde::ScalarField<fdapde::Dynamic, Schwefel> schwefel_func(d);
+		res.push_back(benchmark_function(
+			opt, schwefel_func,
+			utils::load_csv("data/lowdim_inits/" + std::to_string(d) + "_schwefel.csv"),
+			Schwefel::argmin(d), Schwefel::min(), "schwefel_" + std::to_string(d) + "d", title,
+			std::forward<Hooks>(hooks)...
+		));
+	}
 
+	for(auto &d: dims) {
+		fdapde::ScalarField<fdapde::Dynamic, Rastrigin> rastrigin_func(d);
+		res.push_back(benchmark_function(
+			opt, rastrigin_func,
+			utils::load_csv("data/lowdim_inits/" + std::to_string(d) + "_rastrigin.csv"),
+			Rastrigin::argmin(d), Rastrigin::min(), "rastrigin_" + std::to_string(d) + "d", title,
+			std::forward<Hooks>(hooks)...
+		));
+	}
+
+	fdapde::ScalarField<fdapde::Dynamic, SchafferF6> schaffer_f6(2);
 	res.push_back(benchmark_function(
 		opt, schaffer_f6,
 		utils::load_csv("data/lowdim_inits/schaffer_f6.csv"),
-		SchafferF6::argmin(2), SchafferF6::min(), "schaffer_f6", title
+		SchafferF6::argmin(2), SchafferF6::min(), "schaffer_f6", title,
+		std::forward<Hooks>(hooks)...
 	));
-
+	
+	fdapde::ScalarField<fdapde::Dynamic, Rosenbrock> rosenbrock(2);
 	res.push_back(benchmark_function(
 		opt, rosenbrock,
 		utils::load_csv("data/lowdim_inits/rosenbrock.csv"), 
-		Rosenbrock::argmin(2),Rosenbrock::min(), "rosenbrock", title
+		Rosenbrock::argmin(2),Rosenbrock::min(), "rosenbrock", title,
+		std::forward<Hooks>(hooks)...
 	));
 
 	return res;

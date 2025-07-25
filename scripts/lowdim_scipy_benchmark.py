@@ -2,10 +2,30 @@ import numpy as np
 import pandas as pd
 from time import time_ns
 import scipy.optimize as opt
+import pygad
 
 MAX_ITER = 500
+POP_SIZE = 100
 TOL = 1e-5
 STEP = 1e-2
+
+DEFAULT_GAD_OPTS = {
+	"num_generations": 50,
+  "num_parents_mating": 5,   
+	"random_seed": 0,
+  "stop_criteria": "saturate_5",
+	# "parent_selection_type": #"rank", "rws", "tournament"
+	# "K_tournament": 2 # if parent_selection_type = tournament
+  "keep_parents": -1, # could be 0 (keep no parent)
+	"mutation_probability": 0.3,
+	"mutation_type": "random",
+  # keep_elitism=1
+  # crossover_type="single_point"
+  # crossover_probability=None
+  # mutation_type="random"
+  # mutation_by_replacement=False
+	# mutation_percent_genes="default"
+}
 
 def duration_to_str(duration: int) -> str:
 	if duration < 1e3:
@@ -51,7 +71,7 @@ def rastrigin(x: np.ndarray):
 			s += xi**2 - 10.0 * np.cos(2 * np.pi * xi)
 	return x.size * 10 + s
 
-def benchmark_problem(fun, initial_points, method, method_min, title):
+def benchmark_problem_scipy(fun, initial_points, method, method_min, title):
 	if method == "L-BFGS-B":
 		options = {"maxiter": MAX_ITER, "maxcor": 30, "eps": STEP}
 	else:
@@ -68,7 +88,7 @@ def benchmark_problem(fun, initial_points, method, method_min, title):
 			tol=TOL,
 			options=options
 		)
-		duration = (time_ns() - time_begin) / len(initial_points)
+		duration = (time_ns() - time_begin)
 
 		results.loc[len(results)] = {
 			"nit": res.nit,
@@ -81,50 +101,109 @@ def benchmark_problem(fun, initial_points, method, method_min, title):
 	# Save benchmark as csv
 	results.to_csv(f"outputs/py_bmrk_{method}_{title}_{len(initial_points)}.csv")
 	# Print the result to a markdown table
-	nit = results["nit"].mean()
-	nit_std = results["nit"].std()
-	x_diff = results["x_diff"].mean()
-	x_diff_std = results["x_diff"].std()
-	f_diff = results["f_diff"].mean()
-	f_diff_std = results["f_diff"].std()
-	duration = results["duration_microsec"].mean()
-	duration_std = results["duration_microsec"].std()
+	nit, nit_std = results["nit"].mean(), results["nit"].std()
+	x_diff, x_diff_std = results["x_diff"].mean(), results["x_diff"].std()
+	f_diff, f_diff_std = results["f_diff"].mean(), results["f_diff"].std()
+	duration, duration_std = results["duration_microsec"].mean(), results["duration_microsec"].std()
 	print(f"{title}|{nit:.4}|{nit_std:.4}|{x_diff:.2e}|{x_diff_std:.2e}|{f_diff:.2e}|{f_diff_std:.2e}|{duration_to_str(duration)}|{duration_to_str(duration_std)}")
 
-def test_method(method):
+def benchmark_problem_gad(fun, initial_points, method_opts, method_min, title):
+	# optimize
+	results = pd.DataFrame(columns=["nit", "x_diff", "f_diff", "p_id", "duration_microsec"])
+	fitness_func = lambda ga, sol, idx: fun(sol)
+	mutation_bound = sum([np.linalg.norm(v) for v in initial_points]) / len(initial_points)
+	for i in range(len(initial_points)):
+		initial_pop = [np.copy(initial_points[i]) for _ in range(POP_SIZE)]
+		time_begin = time_ns()
+		ga_instance = pygad.GA(
+			fitness_func=fitness_func,
+			initial_population=initial_pop,
+			random_mutation_min_val = -mutation_bound,
+			random_mutation_max_val = mutation_bound,
+			**method_opts	)
+		ga_instance.run()
+		duration = (time_ns() - time_begin)
+		solution, solution_fitness, _ = ga_instance.best_solution()
 
-	print(f"### `{method}`\n")
+		results.loc[len(results)] = {
+			"nit": ga_instance.best_solution_generation,
+			"x_diff": np.linalg.norm(solution - method_min),
+			"f_diff": np.linalg.norm(solution_fitness),
+			"p_id": i,
+			"duration_microsec": duration
+		}	
+
+	# Save benchmark as csv
+	results.to_csv(f"outputs/py_bmrk_gad_{title}_{len(initial_points)}.csv")
+	# Print the result to a markdown table
+	nit, nit_std = results["nit"].mean(), results["nit"].std()
+	x_diff, x_diff_std = results["x_diff"].mean(), results["x_diff"].std()
+	f_diff, f_diff_std = results["f_diff"].mean(), results["f_diff"].std()
+	duration, duration_std = results["duration_microsec"].mean(), results["duration_microsec"].std()
+	print(f"{title}|{nit:.4}|{nit_std:.4}|{x_diff:.2e}|{x_diff_std:.2e}|{f_diff:.2e}|{f_diff_std:.2e}|{duration_to_str(duration)}|{duration_to_str(duration_std)}")
+
+def test_method(scipy_method, gad_dict):
+	print(f"### `{scipy_method}`\n")
 	print("| Method | n_iter_mean | n_iter_std | x_diff_mean | x_diff_std | f_diff_mean | f_diff_std | duration_mean | duration_std ")
 	print("|-|-|-|-|-|-|-|-|-|")
 
 	init_sphere_2d = np.loadtxt("data/lowdim_inits/2_sphere.csv", delimiter=",")
-	benchmark_problem(sphere, init_sphere_2d, method, np.zeros(2), "Sphere 2D")
 	init_sphere_10d = np.loadtxt("data/lowdim_inits/10_sphere.csv", delimiter=",")
-	benchmark_problem(sphere, init_sphere_10d, method, np.zeros(10), "Sphere 10D")
 	init_sphere_30d = np.loadtxt("data/lowdim_inits/30_sphere.csv", delimiter=",")
-	benchmark_problem(sphere, init_sphere_30d, method, np.zeros(30), "Sphere 30D")
-
 	init_schwefel_2d = np.loadtxt("data/lowdim_inits/2_schwefel.csv", delimiter=",")
-	benchmark_problem(schwefel, init_schwefel_2d, method, np.ones(2) * 420.9687, "Schwefel 2D")
 	init_schwefel_10d = np.loadtxt("data/lowdim_inits/10_schwefel.csv", delimiter=",")
-	benchmark_problem(schwefel, init_schwefel_10d, method, np.ones(10) * 420.9687, "Schwefel 10D")
 	init_schwefel_30d = np.loadtxt("data/lowdim_inits/30_schwefel.csv", delimiter=",")
-	benchmark_problem(schwefel, init_schwefel_30d, method, np.ones(30) * 420.9687, "Schwefel 30D")
-
 	init_rastrigin_2d = np.loadtxt("data/lowdim_inits/2_rastrigin.csv", delimiter=",")
-	benchmark_problem(rastrigin, init_rastrigin_2d, method, np.zeros(2), "Rastrigin 2D")
 	init_rastrigin_10d = np.loadtxt("data/lowdim_inits/10_rastrigin.csv", delimiter=",")
-	benchmark_problem(rastrigin, init_rastrigin_10d, method, np.zeros(10), "Rastrigin 10D")
 	init_rastrigin_30d = np.loadtxt("data/lowdim_inits/30_rastrigin.csv", delimiter=",")
-	benchmark_problem(rastrigin, init_rastrigin_30d, method, np.zeros(30),"Rastrigin 30D")
-
 	init_schaffer_f6 = np.loadtxt("data/lowdim_inits/schaffer_f6.csv", delimiter=",")
-	benchmark_problem(schaffer_f6, init_schaffer_f6, method, np.zeros(2), "Schaffer F6")
-
 	init_rosenbrock = np.loadtxt("data/lowdim_inits/rosenbrock.csv", delimiter=",")
-	benchmark_problem(rosenbrock, init_rosenbrock, method, np.ones(2), "Rosenbrock")
+
+	if scipy_method != None:
+		benchmark_problem_scipy(sphere, init_sphere_2d, scipy_method, np.zeros(2), "Sphere 2D")
+		benchmark_problem_scipy(sphere, init_sphere_10d, scipy_method, np.zeros(10), "Sphere 10D")
+		benchmark_problem_scipy(sphere, init_sphere_30d, scipy_method, np.zeros(30), "Sphere 30D")
+		benchmark_problem_scipy(schwefel, init_schwefel_2d, scipy_method, np.ones(2) * 420.9687, "Schwefel 2D")
+		benchmark_problem_scipy(schwefel, init_schwefel_10d, scipy_method, np.ones(10) * 420.9687, "Schwefel 10D")
+		benchmark_problem_scipy(schwefel, init_schwefel_30d, scipy_method, np.ones(30) * 420.9687, "Schwefel 30D")
+		benchmark_problem_scipy(rastrigin, init_rastrigin_2d, scipy_method, np.zeros(2), "Rastrigin 2D")
+		benchmark_problem_scipy(rastrigin, init_rastrigin_10d, scipy_method, np.zeros(10), "Rastrigin 10D")
+		benchmark_problem_scipy(rastrigin, init_rastrigin_30d, scipy_method, np.zeros(30),"Rastrigin 30D")
+		benchmark_problem_scipy(schaffer_f6, init_schaffer_f6, scipy_method, np.zeros(2), "Schaffer F6")
+		benchmark_problem_scipy(rosenbrock, init_rosenbrock, scipy_method, np.ones(2), "Rosenbrock")
+	elif gad_dict != None:
+		benchmark_problem_gad(sphere, init_sphere_2d, gad_dict, np.zeros(2), "Sphere 2D")
+		benchmark_problem_gad(sphere, init_sphere_10d, gad_dict, np.zeros(10), "Sphere 10D")
+		benchmark_problem_gad(sphere, init_sphere_30d, gad_dict, np.zeros(30), "Sphere 30D")
+		benchmark_problem_gad(schwefel, init_schwefel_2d, gad_dict, np.ones(2) * 420.9687, "Schwefel 2D")
+		benchmark_problem_gad(schwefel, init_schwefel_10d, gad_dict, np.ones(10) * 420.9687, "Schwefel 10D")
+		benchmark_problem_gad(schwefel, init_schwefel_30d, gad_dict, np.ones(30) * 420.9687, "Schwefel 30D")
+		benchmark_problem_gad(rastrigin, init_rastrigin_2d, gad_dict, np.zeros(2), "Rastrigin 2D")
+		benchmark_problem_gad(rastrigin, init_rastrigin_10d, gad_dict, np.zeros(10), "Rastrigin 10D")
+		benchmark_problem_gad(rastrigin, init_rastrigin_30d, gad_dict, np.zeros(30),"Rastrigin 30D")
+		benchmark_problem_gad(schaffer_f6, init_schaffer_f6, gad_dict, np.zeros(2), "Schaffer F6")
+		benchmark_problem_gad(rosenbrock, init_rosenbrock, gad_dict, np.ones(2), "Rosenbrock")
 
 if __name__ == "__main__":
-	test_method("L-BFGS-B")
-	test_method("Nelder-Mead")
-	test_method("CG")
+	test_method("L-BFGS-B", None)
+	test_method("Nelder-Mead", None)
+	test_method("CG", None)
+
+	# test_method(None, {
+	# 	"parent_selection_type": "tournament",
+	# 	"K_tournament": 2,
+	# 	**DEFAULT_GAD_OPTS
+	# })
+	# test_method(None, {
+	# 	"parent_selection_type": "tournament",
+	# 	"K_tournament": 2,
+	# 	**DEFAULT_GAD_OPTS
+	# })
+	# test_method(None, {
+	# 	"parent_selection_type": "rank",
+	# 	**DEFAULT_GAD_OPTS
+	# })
+	# test_method(None, {
+	# 	"parent_selection_type": "rank",
+	# 	**DEFAULT_GAD_OPTS
+	# })

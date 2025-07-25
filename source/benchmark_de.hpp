@@ -1,15 +1,7 @@
 #include <fdaPDE/fdapde.h>
-#include <filesystem>
-#include <string>
-#include <chrono>
+
 #include <utility>
-
-using namespace fdapde;
-using path = std::filesystem::path;
-using microsec = std::chrono::duration<double, std::micro>;
-
-template <typename OptimizerType>
-using NamedOptimizer = std::pair<std::string, OptimizerType>;
+#include "utilities"
 
 constexpr double LINK_TOL = 1e-8;
 constexpr int MAX_ITERATIONS = 500;
@@ -17,11 +9,13 @@ constexpr int CV_K = 5;
 constexpr double STEP_SIZE = 1e-2;
 constexpr double ERR_TOL = 1e-5;
 
+namespace de {
+
 /**
  * @brief Result of the benchmakr of a single (optimizer, test_case) pair
  * 
  */
-struct DEBenchmarkResult {
+struct BenchmarkResult {
 	std::string test_title;
 	std::string optimizer;
 
@@ -36,7 +30,7 @@ struct DEBenchmarkResult {
 };
 
 template <typename SpaceTriangulation>
-struct DETestScenario {
+struct TestScenario {
 
 	static constexpr int embed_dim = SpaceTriangulation::embed_dim;
 
@@ -45,7 +39,7 @@ struct DETestScenario {
 	Eigen::VectorXd g_init;
 	SpaceTriangulation discretization;
 
-	DETestScenario(const std::string &title, Eigen::MatrixXd &&dataset, Eigen::VectorXd &&g_init, SpaceTriangulation &&discretization):
+	TestScenario(const std::string &title, Eigen::MatrixXd &&dataset, Eigen::VectorXd &&g_init, SpaceTriangulation &&discretization):
 		title( title),
 		dataset( dataset),
 		g_init( g_init),
@@ -72,25 +66,25 @@ std::pair< Eigen::MatrixXd, Eigen::MatrixXd > split_dataset( const Eigen::Matrix
  */
 std::string file_name( const std::string &test_directory, const std::string &optimizer );
 
-DETestScenario<Triangulation<2, 2>> load_test_2d(const std::string &dir_name);
+TestScenario<Triangulation<2, 2>> load_test_2d(const std::string &dir_name);
 
-DETestScenario<Triangulation<2, 3>> load_test_2_5d(const std::string &dir_name);
+TestScenario<Triangulation<2, 3>> load_test_2_5d(const std::string &dir_name);
 
-DETestScenario<Triangulation<1, 1>> load_test_snp500(const std::string &dir_name);
+TestScenario<Triangulation<1, 1>> load_test_snp500(const std::string &dir_name);
 
 template <
 	typename Optimizer,
 	typename DEPDESolver,
 	typename SpaceTriangulation
 >
-DEBenchmarkResult benchmark_one(
+BenchmarkResult benchmark_one(
 	Optimizer &optimizer,
 	DEPDESolver &solver,
-	DETestScenario<SpaceTriangulation> &scenario,
+	TestScenario<SpaceTriangulation> &scenario,
 	// Eigen::VectorXd lambda_prop,
 	const std::string &optimizer_title
 ) {
-	DEBenchmarkResult res;
+	BenchmarkResult res;
 	
 	// calculate the cross_validation error
 	// res.cv_error = 0.0;
@@ -138,19 +132,19 @@ DEBenchmarkResult benchmark_one(
 	return res;
 }
 
-template <typename DETestScenarioType>
-std::vector<DEBenchmarkResult> benchmark_all_opt(DETestScenarioType &scenario) {
+template <typename TestScenarioType>
+std::vector<BenchmarkResult> benchmark_all_opt(TestScenarioType &scenario) {
 	// Create solver
 	FeSpace Vh(scenario.discretization, P1<1>);
 	TrialFunction f(Vh);
 	TestFunction  v(Vh);
 	auto a = integral(scenario.discretization)(dot(grad(f), grad(v)));
-	ZeroField<DETestScenarioType::embed_dim> u;
+	ZeroField<TestScenarioType::embed_dim> u;
 	auto F = integral(scenario.discretization)(u * v);
 	auto solver = fe_de_elliptic(a, F);
 
 	// Benchmark one optimizer
-	std::vector<DEBenchmarkResult> results;
+	std::vector<BenchmarkResult> results;
 
 	auto lbfgs30 = LBFGS<Eigen::Dynamic, WolfeLineSearch> {MAX_ITERATIONS, ERR_TOL, STEP_SIZE, 30};
 	auto grad_descent = GradientDescent<Eigen::Dynamic, WolfeLineSearch> {MAX_ITERATIONS, ERR_TOL, STEP_SIZE};
@@ -170,8 +164,10 @@ std::vector<DEBenchmarkResult> benchmark_all_opt(DETestScenarioType &scenario) {
 	return results;
 }
 
-void print_benchmark_md( const std::vector<DEBenchmarkResult> &benchmark, std::ostream &os );
+void print_benchmark_md( const std::vector<BenchmarkResult> &benchmark, std::ostream &os );
 
-void save_log_densities( const std::vector<DEBenchmarkResult> &benchmark );
+void save_log_densities( const std::vector<BenchmarkResult> &benchmark );
 
 void full_benchmark();
+
+}; //namespace de
