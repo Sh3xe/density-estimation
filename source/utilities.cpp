@@ -2,6 +2,17 @@
 #include <cmath>
 #include "rapidcsv.h"
 #include <fstream>
+#include <sstream>
+
+std::string utils::file_name(
+	const std::string &test_directory,
+	const std::string &optimizer
+) {
+	std::stringstream ss;
+	ss << std::setprecision(2);
+	ss << optimizer << "_" << test_directory << "_log_density.csv";
+	return ss.str();
+}
 
 std::string utils::duration_to_str(const microsec &duration) {
 	if(duration.count() < 1e3) {

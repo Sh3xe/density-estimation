@@ -119,7 +119,7 @@ void print_optim_benchmark(const std::vector<BenchmarkResult> &res, const std::s
 
 void print_performances( const BenchmarkResult &result, std::ostream &os );
 
-void full_benchmark();
+void full_benchmark(bool output_csv = false);
 
 // Optimization benchmark
 
@@ -136,6 +136,7 @@ BenchmarkResult benchmark_function(
 	double real_min,
 	const std::string &title,
 	const std::string &opt_title,
+	bool output_csv,
 	Hooks &&...hooks
 ) {
 	// [nit, x_diff, f_diff, p_id, duration_microsec]
@@ -156,12 +157,15 @@ BenchmarkResult benchmark_function(
 		df(i, 4) = duration;
 	}
 
-	std::string file_title = "outputs/cpp_bmrk_" + opt_title + "_" + title + "_" + std::to_string(init_pts.rows()) + "d.csv";
-	utils::write_csv(
-		file_title,
-		{"nit","x_diff","f_diff","p_id","duration_microsec"},
-		df
-	);
+	if(output_csv) {
+		std::string file_title = "outputs/cpp_bmrk_" + opt_title + "_" + title + "_" + std::to_string(init_pts.rows()) + "d.csv";
+		
+		utils::write_csv(
+			file_title,
+			{"nit","x_diff","f_diff","p_id","duration_microsec"},
+			df
+		);
+	}
 
 	BenchmarkResult res;
 	res.title = title;
@@ -181,6 +185,7 @@ template <typename OptimizerType, typename ...Hooks>
 std::vector<BenchmarkResult> benchmark_optimizer(
 	OptimizerType &opt,
 	const std::string &title,
+	bool output_csv,
 	Hooks &&...hooks
 ) {
 	std::cout << "Benchmarking " << title << std::endl;
@@ -195,7 +200,7 @@ std::vector<BenchmarkResult> benchmark_optimizer(
 			opt, shpere_func,
 			utils::load_csv("data/lowdim_inits/" + std::to_string(d) + "_sphere.csv"), 
 			Sphere::argmin(d), Sphere::min(), "sphere_" + std::to_string(d) + "d", title,
-			std::forward<Hooks>(hooks)...
+			output_csv, std::forward<Hooks>(hooks)...
 		));
 	}
 
@@ -205,7 +210,7 @@ std::vector<BenchmarkResult> benchmark_optimizer(
 			opt, schwefel_func,
 			utils::load_csv("data/lowdim_inits/" + std::to_string(d) + "_schwefel.csv"),
 			Schwefel::argmin(d), Schwefel::min(), "schwefel_" + std::to_string(d) + "d", title,
-			std::forward<Hooks>(hooks)...
+			output_csv, std::forward<Hooks>(hooks)...
 		));
 	}
 
@@ -215,7 +220,7 @@ std::vector<BenchmarkResult> benchmark_optimizer(
 			opt, rastrigin_func,
 			utils::load_csv("data/lowdim_inits/" + std::to_string(d) + "_rastrigin.csv"),
 			Rastrigin::argmin(d), Rastrigin::min(), "rastrigin_" + std::to_string(d) + "d", title,
-			std::forward<Hooks>(hooks)...
+			output_csv, std::forward<Hooks>(hooks)...
 		));
 	}
 
@@ -224,7 +229,7 @@ std::vector<BenchmarkResult> benchmark_optimizer(
 		opt, schaffer_f6,
 		utils::load_csv("data/lowdim_inits/schaffer_f6.csv"),
 		SchafferF6::argmin(2), SchafferF6::min(), "schaffer_f6", title,
-		std::forward<Hooks>(hooks)...
+		output_csv, std::forward<Hooks>(hooks)...
 	));
 	
 	fdapde::ScalarField<fdapde::Dynamic, Rosenbrock> rosenbrock(2);
@@ -232,7 +237,7 @@ std::vector<BenchmarkResult> benchmark_optimizer(
 		opt, rosenbrock,
 		utils::load_csv("data/lowdim_inits/rosenbrock.csv"), 
 		Rosenbrock::argmin(2),Rosenbrock::min(), "rosenbrock", title,
-		std::forward<Hooks>(hooks)...
+		output_csv, std::forward<Hooks>(hooks)...
 	));
 
 	return res;

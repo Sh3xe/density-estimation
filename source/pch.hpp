@@ -1,6 +1,9 @@
 #pragma once
 
+#include "cmake_defines.hpp"
+
 #include <fdaPDE/fdapde.h>
+
 #include <filesystem>
 #include <sstream>
 #include <fstream>
