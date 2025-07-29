@@ -1,6 +1,7 @@
 #pragma once
 
 #include "utilities.hpp"
+#include "pch.hpp"
 
 namespace de {
 
@@ -93,6 +94,7 @@ double cv_error(
 		// Split the dataset & setup solver
 		const auto [train_set, test_set] = split_dataset(scenario.dataset, CV_K, i);
 		fdapde::GeoFrame geo_data(scenario.discretization);
+
 		auto& sample = geo_data.template insert_scalar_layer<fdapde::POINT>("sample", train_set);
 		fdapde::DEPDE<typename DEPDESolver::solver_t> model(geo_data, solver);
 		model.set_llik_tolerance(LINK_TOL);
@@ -144,6 +146,7 @@ DEBenchmarkResult benchmark_one(
 	res.lambda = lambda_prop[0];
 	auto cv_begin_time = std::chrono::high_resolution_clock::now();
 	for(int i = 0; i < lambda_prop.rows(); ++i) {
+		std::cout << "Computing CV err (" << i+1 << "/" << CV_K <<") for " << scenario.title << " " << optimizer_title << std::endl;
 		double err = cv_error(optimizer, solver, scenario, lambda_prop[i], std::forward<Hooks>(hooks)...);
 		if(err < res.cv_error) {
 			res.cv_error = err;

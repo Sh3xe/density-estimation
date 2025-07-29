@@ -164,18 +164,19 @@ DETestScenario<Triangulation<1, 2>> load_test_1_5_d(const std::string &dir_name)
 }
 
 DETestScenario<Triangulation<1, 1>> load_test_snp500(const std::string &dir_name) {
-	// Geometry definition
 	auto dir = path(ROOT_DIR) / path("data") / path(dir_name);
-
-	Triangulation<1, 1> space_discr(-100.0, 100.0, 200);
-
-	Eigen::VectorXd g_init = Eigen::VectorXd::Constant(200, 1, 1.0); // TODO: initial gaussian distribution
 	
-	// Data
-	Eigen::MatrixXd dataset =
-		read_csv<double>(dir / path("data_space.csv"))
-		.as_matrix();
+	// Data loading
+	Eigen::VectorXd dataset = read_csv<double>( dir / path("data_space.csv"), true, true).as_matrix();
+	double min = dataset.minCoeff();
+	double max = dataset.maxCoeff();	
+	constexpr int subdivisions = 300;
 	
+	// Geometry definition
+	Triangulation<1, 1> space_discr(min - 1.0, max + 1.0, subdivisions);
+
+	Eigen::VectorXd g_init = Eigen::VectorXd::Constant(subdivisions, 1, 1.0 / static_cast<double>(subdivisions));
+
 	return DETestScenario<Triangulation<1, 1>>(dir_name, std::move(dataset), std::move(g_init), std::move(space_discr) );
 }
 
@@ -243,13 +244,12 @@ void full_benchmark(bool output_csv)
 		// 	save_log_densities(accidents_bergamo_res)
 	// });
 
-	// workers.emplace_back([&](){
-	// 	auto snp500 = load_test_snp500("snp500");
-	// 	auto snp500_res = benchmark_all_opt(snp500);
-	// 	print_benchmark_md(snp500_res, output_file);
-	// 	if(output_csv)
-	// 	save_log_densities(snp500_res);
-	// });
+	workers.emplace_back([&](){
+		auto snp500 = load_test_snp500("snp500");
+		auto snp500_res = benchmark_all_opt(snp500, gen_lambda_prop(-2.0, 2.0, 1.0));
+		print_benchmark_md(snp500_res, output_file);
+		if(output_csv) save_log_densities(snp500_res);
+	});
 
 	for(auto &t: workers) {
 		t.join();
