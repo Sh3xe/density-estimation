@@ -37,7 +37,7 @@ de <- DE.FEM(
 	data = gaussian_data,
 	FEMbasis = FEMbasis,
 	lambda <- lambda_proposal,
-	nfolds = 10,
+	nfolds = 5,
 	tol1 = 1e-4,
 	nsimulations = 1000,
 	preprocess_method = "RightCV",

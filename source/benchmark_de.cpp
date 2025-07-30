@@ -17,7 +17,7 @@ using namespace fdapde;
 using namespace Eigen;
 
 constexpr double LINK_TOL = 1e-5;
-constexpr int MAX_ITERATIONS = 200;
+constexpr int MAX_ITERATIONS = 500;
 constexpr int CV_K = 5;
 constexpr double STEP_SIZE = 1e-2;
 constexpr double ERR_TOL = 1e-5;
@@ -245,11 +245,11 @@ std::vector<DEBenchmarkResult> benchmark_all_opt(DETestScenarioType &scenario, c
 }
 
 void save_log_densities( const std::vector<DEBenchmarkResult> &benchmark ) {
-	auto output_dir = path("outputs");
+	auto output_dir = path(ROOT_DIR) / path("outputs");
 	for(const DEBenchmarkResult &res: benchmark) {
-		std::string filename = output_dir / utils::file_name(res.test_title, res.optimizer);
-		std::cout << "filename" << filename << std::endl;
-		write_csv(filename, res.log_density);
+		path filename = output_dir / path("cpp_" + utils::file_name(res.test_title, res.optimizer));
+		std::cout << "filename" << filename.string() << std::endl;
+		write_csv(filename.string(), res.log_density);
 	}
 }
 
