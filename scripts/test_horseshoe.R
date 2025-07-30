@@ -75,7 +75,7 @@ mesh.eval <- create.mesh.2D(nodes = grid)
 # Set up the finite element basis
 FEMbasis.eval <- create.FEM.basis(mesh = mesh.eval)
 
-estimated_log_dens <- read.csv("outputs/grad_descent_horseshoe_log_density.csv")
+estimated_log_dens <- read.csv("outputs/cpp_lbfgs30_horseshoe_log_density.csv")
 FEMfunction <- FEM(coeff = estimated_log_dens, FEMbasis = FEMbasis)
 evaluation <- eval.FEM(FEM = FEMfunction, locations = mesh.eval$nodes)
 
@@ -90,7 +90,7 @@ true_density <- dens.func.2(data = mesh.eval$nodes,
 par(mfrow = c(1,2), mai = c(0.5,0.25,0.5,0.5))
 
 # function in helper_functions_plot.R
-plot.density.2D(X = X, Y = Y, Z = true_density, boundary = boundary.domain.2())
+plot.density.2D(X = X, Y = Y, Z = true_density, boundary = boundary.domain.2(), colorscale="viridis")
 
 # function in helper_functions_plot.R
-plot.density.2D(X = X, Y = Y, Z = estimated_density, boundary = boundary.domain.2())
+plot.density.2D(X = X, Y = Y, Z = estimated_density, boundary = boundary.domain.2(), colorscale="viridis")

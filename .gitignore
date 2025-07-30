@@ -7,5 +7,4 @@ docker_cmd.txt
 data/sim*.txt
 scripts/t.py
 source/cmake_defines.hpp
-outputs
 .vscode

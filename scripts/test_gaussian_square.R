@@ -54,9 +54,8 @@ true_density <- dens.func.1(mesh$nodes)
 
 write.csv(true_density, file.path(directory, "true_density.csv"))
 
-
 # Plot
-log_dens <- read.csv(file.path("outputs/grad_descent_gaussian_square_log_density.csv"))
+log_dens <- read.csv(file.path("outputs/cpp_cg_pr_gaussian_square_log_density.csv"))
 par(mfrow = c(1,2), mai = c(0.5,0.25,0.5,0.5))
 x_plot <- seq(from=0.0, to=1.0, length.out = 100)
 y_plot <- seq(from=0.0, to=1.0, length.out = 100)
@@ -89,3 +88,4 @@ plot.density.2D(
 		byrow = TRUE
 	)
 )
+

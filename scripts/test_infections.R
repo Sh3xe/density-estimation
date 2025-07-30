@@ -49,15 +49,14 @@ best_lambda_id <- match(de$lambda, lambda_proposal)
 
 write.csv(de$f_init[,best_lambda_id], file.path(directory, "f_init.csv"))
 
-
-
 # Load the data
 f_init <- read.csv(file.path(directory, "f_init.csv"))
 sample <- read.csv(file.path(directory, "sample.csv"))
-log_dens <- read.csv("./outputs/lbfgs30_infections_southampton_log_density.csv")
+log_dens <- read.csv("./outputs/cpp_lbfgs30_infections_southampton_log_density.csv")
 
 # Plot
-FEMfunction <- FEM(coeff = f_init[,2], FEMbasis = FEMbasis)
+FEMfunction <- FEM(coeff = log_dens$V0, FEMbasis = FEMbasis)
 evaluation <- eval.FEM(FEM = FEMfunction, locations = mesh$nodes)
 estimated_density <- exp(evaluation)
-plot.density.2D.map(coeff = estimated_density, mesh = mesh, colorscale = viridis)
+plot.density.2D.map(coeff = estimated_density, mesh = mesh, colorscale = "viridis")
+
