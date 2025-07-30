@@ -62,6 +62,7 @@ def box_plot_diff(py_outs, cpp_outs, method_title, title, ax, use_log=False):
 	
 	py_df = pd.read_csv("outputs/" + py_csv[0])
 	cpp_df = pd.read_csv("outputs/" + cpp_csv[0])
+	# cpp_df = cpp_df[cpp_df["x_diff"] < 1e3]
 	
 	data = [cpp_df["x_diff"].to_numpy(), py_df["x_diff"].to_numpy()]
 	ax.set_ylabel('x_diff')
@@ -154,7 +155,36 @@ def animation_genetic():
 	images = create_population_plots(data)
 	create_gif(images, output_gif_path)
 
+def plot_initial_points(function, bound, csv_name):
+	# Find initial points
+	df = pd.read_csv(f"data/lowdim_inits/{csv_name}.csv", names=["x", "y"])
+
+	# Plots function
+	x = np.linspace(-bound, bound, 100)
+	y = np.linspace(-bound, bound, 100)
+	X, Y = np.meshgrid(x, y)
+	Z = np.array([[function(xi, yi) for xi in x] for yi in y])
+
+	plt.imshow(Z, extent=[-bound, bound, -bound, bound], origin="lower", cmap="viridis", alpha=0.5)
+	# plt.colorbar(label="Schwefel Function Value")
+	plt.scatter(x=df["x"], y=df["y"], alpha=0.7, color="red")
+	plt.xlabel("X")
+	plt.ylabel("Y")
+	plt.xlim(-bound, bound)
+	plt.ylim(-bound, bound)
+	plt.grid(True)
+	plt.title(csv_name)
+	plt.tight_layout()
+	plt.savefig(f"figures/{csv_name}_init_point.png")
+	plt.close()
+
 if __name__ == "__main__":
 	box_plot_lowdim("L-BFGS-B", "lbfgs30", "L-BFGS-30")
 	box_plot_lowdim("Nelder-Mead", "nelder_mead", "Nelder-Mead")
 	box_plot_lowdim("CG", "cg_fr", "Conjugate Gradient")
+
+	plot_initial_points(rosenbrock, 5, "rosenbrock")
+	plot_initial_points(schaffer_f6, 5, "schaffer_f6")
+	plot_initial_points(rastrigin, 5.12, "2_rastrigin")
+	plot_initial_points(sphere, 5, "2_sphere")
+	plot_initial_points(schwefel, 500, "2_schwefel")

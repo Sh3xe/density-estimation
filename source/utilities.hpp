@@ -1,5 +1,6 @@
 #pragma once
 
+#include "cmake_defines.hpp"
 #include <string>
 #include <chrono>
 #include <filesystem>

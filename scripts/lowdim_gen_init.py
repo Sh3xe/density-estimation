@@ -17,11 +17,11 @@ def gen_sphere(dim: int):
 	np.savetxt(DIR + f"{dim}_" + "sphere.csv", matrix, delimiter=',', fmt='%f')
 
 def gen_schwefel(dim: int):
-	matrix = npr.normal(size=(NUM_INIT, dim)) * 20.0
+	matrix = npr.normal(size=(NUM_INIT, dim)) * 100.0
 	np.savetxt(DIR + f"{dim}_" + "schwefel.csv", matrix, delimiter=',', fmt='%f')
 
 def gen_rastrigin(dim: int):
-	matrix = npr.normal(size=(NUM_INIT, dim)) * 5.0
+	matrix = npr.normal(size=(NUM_INIT, dim)) * 2.0
 	np.savetxt(DIR + f"{dim}_" + "rastrigin.csv", matrix, delimiter=',', fmt='%f')
 
 if __name__ == "__main__":

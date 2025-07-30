@@ -80,27 +80,27 @@ void lowdim::full_benchmark(bool output_csv) {
 		print_optim_benchmark(nelder_mead_res, "nelder_mead", file);
 	}
 
-	{
-		GeneticOptim<Dynamic> genetic_bin_gaus {MAX_ITER, TOL, 5, 30};
-		auto genetic_bin_gaus_res = benchmark_optimizer(genetic_bin_gaus, "genetic_bin_gaus", output_csv, BinaryTournamentSelection(), GaussianMutation());
-		print_optim_benchmark(genetic_bin_gaus_res, "genetic_bin_gaus", file);
-	}
+	// {
+	// 	GeneticOptim<Dynamic> genetic_bin_gaus {MAX_ITER, TOL, 5, 30};
+	// 	auto genetic_bin_gaus_res = benchmark_optimizer(genetic_bin_gaus, "genetic_bin_gaus", output_csv, BinaryTournamentSelection(), GaussianMutation());
+	// 	print_optim_benchmark(genetic_bin_gaus_res, "genetic_bin_gaus", file);
+	// }
 
-	{
-		GeneticOptim<Dynamic> genetic_bin_co {MAX_ITER, TOL, 5, 30};
-		auto genetic_bin_co_res = benchmark_optimizer(genetic_bin_co, "genetic_bin_co", output_csv, BinaryTournamentSelection(), CrossoverMutation(), GaussianMutation());
-		print_optim_benchmark(genetic_bin_co_res, "genetic_bin_co", file);
-	}
+	// {
+	// 	GeneticOptim<Dynamic> genetic_bin_co {MAX_ITER, TOL, 5, 30};
+	// 	auto genetic_bin_co_res = benchmark_optimizer(genetic_bin_co, "genetic_bin_co", output_csv, BinaryTournamentSelection(), CrossoverMutation(), GaussianMutation());
+	// 	print_optim_benchmark(genetic_bin_co_res, "genetic_bin_co", file);
+	// }
 
-	{
-		GeneticOptim<Dynamic> genetic_rk_gaus {MAX_ITER, TOL, 5, 30};
-		auto genetic_rk_gaus_res = benchmark_optimizer(genetic_rk_gaus, "genetic_rk_gaus", output_csv, RankSelection(), GaussianMutation());
-		print_optim_benchmark(genetic_rk_gaus_res, "genetic_rk_gaus", file);
-	}
+	// {
+	// 	GeneticOptim<Dynamic> genetic_rk_gaus {MAX_ITER, TOL, 5, 30};
+	// 	auto genetic_rk_gaus_res = benchmark_optimizer(genetic_rk_gaus, "genetic_rk_gaus", output_csv, RankSelection(), GaussianMutation());
+	// 	print_optim_benchmark(genetic_rk_gaus_res, "genetic_rk_gaus", file);
+	// }
 
-	{
-		GeneticOptim<Dynamic> genetic_rk_co {MAX_ITER, TOL, 5, 30};
-		auto genetic_rk_co_res = benchmark_optimizer(genetic_rk_co, "genetic_rk_co", output_csv, RankSelection(), CrossoverMutation(), GaussianMutation());
-		print_optim_benchmark(genetic_rk_co_res, "genetic_rk_co", file);
-	}
+	// {
+	// 	GeneticOptim<Dynamic> genetic_rk_co {MAX_ITER, TOL, 5, 30};
+	// 	auto genetic_rk_co_res = benchmark_optimizer(genetic_rk_co, "genetic_rk_co", output_csv, RankSelection(), CrossoverMutation(), GaussianMutation());
+	// 	print_optim_benchmark(genetic_rk_co_res, "genetic_rk_co", file);
+	// }
 }
