@@ -1,10 +1,23 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 import os
 import pandas as pd
 import json
 import imageio
 
+def duration_to_str(duration: int) -> str:
+	if duration < 1e3:
+		return f"{int(duration)}ns"
+	elif duration < 1e6:
+		return f"{int(duration * 1e-3)}\\textmu s"
+	elif duration < 1e9:
+		return f"{int(duration * 1e-6)}ms"
+	elif duration < 1e12:
+		return f"{int(duration * 1e-9)}s"
+	else:
+		return ">1000s"
+	
 def schaffer_f6(x, y):
 	r = x**2 + y**2
 	a = np.sin(np.sqrt(r))
@@ -125,7 +138,7 @@ def plot_population(population, time_frame):
 	X, Y = np.meshgrid(x, y)
 	Z = np.array([[schwefel(xi, yi) for xi in x] for yi in y])
 
-	plt.imshow(Z, extent=[-MAX_VAL, MAX_VAL, -MAX_VAL, MAX_VAL], origin="lower", cmap="viridis", alpha=0.5)
+	plt.imshow(Z, extent=[-MAX_VAL, MAX_VAL, -MAX_VAL, MAX_VAL], origin="lower",  alpha=0.5)
 	plt.colorbar(label="Schwefel Function Value")
 	plt.scatter(*zip(*population), alpha=0.7, color="red")
 	plt.title(f"Population at Time Frame {time_frame}")
@@ -165,9 +178,9 @@ def plot_initial_points(function, bound, csv_name):
 	X, Y = np.meshgrid(x, y)
 	Z = np.array([[function(xi, yi) for xi in x] for yi in y])
 
-	plt.imshow(Z, extent=[-bound, bound, -bound, bound], origin="lower", cmap="viridis", alpha=0.5)
+	plt.imshow(Z, extent=[-bound, bound, -bound, bound], origin="lower", cmap="RdBu", alpha=0.5)
 	# plt.colorbar(label="Schwefel Function Value")
-	plt.scatter(x=df["x"], y=df["y"], alpha=0.7, color="red")
+	plt.scatter(x=df["x"], y=df["y"], alpha=0.7, color="#000000")
 	plt.xlabel("X")
 	plt.ylabel("Y")
 	plt.xlim(-bound, bound)
@@ -178,13 +191,73 @@ def plot_initial_points(function, bound, csv_name):
 	plt.savefig(f"figures/{csv_name}_init_point.png")
 	plt.close()
 
-if __name__ == "__main__":
-	box_plot_lowdim("L-BFGS-B", "lbfgs30", "L-BFGS-30")
-	box_plot_lowdim("Nelder-Mead", "nelder_mead", "Nelder-Mead")
-	box_plot_lowdim("CG", "cg_fr", "Conjugate Gradient")
+def output_diff_table_line(function_name, py_outs, cpp_outs):
+	py_csv = list(filter(lambda x: function_name in x, py_outs))
+	cpp_csv = list(filter(lambda x: function_name in x, cpp_outs))
 
-	plot_initial_points(rosenbrock, 5, "rosenbrock")
-	plot_initial_points(schaffer_f6, 5, "schaffer_f6")
-	plot_initial_points(rastrigin, 5.12, "2_rastrigin")
-	plot_initial_points(sphere, 5, "2_sphere")
-	plot_initial_points(schwefel, 500, "2_schwefel")
+	if len(py_csv) != 1 or len(cpp_csv) != 1:
+		print("Cannot find csv files")
+		return
+	
+	py_df = pd.read_csv("outputs/" + py_csv[0])
+	cpp_df = pd.read_csv("outputs/" + cpp_csv[0])
+
+	s = ""
+
+	s += "{} (fdaPDE)|{:.1f} \\textpm {:.1f} |{:.2e} \\textpm {:.2e}|{:.2e}\\textpm {:.2e}|{}\\textpm {}\n".format(
+		function_name.replace("_", "\\_"),
+		cpp_df["nit"].mean(), cpp_df["nit"].std(),
+		cpp_df["x_diff"].mean(), cpp_df["x_diff"].std(),
+		cpp_df["f_diff"].mean(), cpp_df["f_diff"].std(),
+		duration_to_str(cpp_df["duration_microsec"].mean()), duration_to_str(cpp_df["duration_microsec"].std()),
+		)
+	
+	s += "{} (scipy)|{:.1f} \\textpm {:.1f} |{:.2e} \\textpm {:.2e}|{:.2e}\\textpm {:.2e}|{}\\textpm {}\n".format(
+		function_name.replace("_", "\\_"),
+		py_df["nit"].mean(), py_df["nit"].std(),
+		py_df["x_diff"].mean(), py_df["x_diff"].std(),
+		py_df["f_diff"].mean(), py_df["f_diff"].std(),
+		duration_to_str(py_df["duration_microsec"].mean()), duration_to_str(py_df["duration_microsec"].std()),
+		)
+	return s
+
+def output_diff_table(py_name, cpp_name):
+	files = os.listdir("outputs")
+	outputs = list(filter(lambda x: ".csv" in x, files))
+	py_outs = list(filter(lambda x: "py" in x and py_name in x, outputs))
+	cpp_outs = list(filter(lambda x: "cpp" in x and cpp_name in x, outputs))
+
+	s = "Method|Iters|x\\_diff|f\\_diff|duration\n"
+	s += "-|-|-|-|-\n"
+
+	s += output_diff_table_line("sphere_2d", py_outs, cpp_outs)
+	s += output_diff_table_line("sphere_10d", py_outs, cpp_outs)
+	s += output_diff_table_line("sphere_30d", py_outs, cpp_outs)
+
+	s += output_diff_table_line("rastrigin_2d", py_outs, cpp_outs)
+	s += output_diff_table_line("rastrigin_10d", py_outs, cpp_outs)
+	s += output_diff_table_line("rastrigin_30d", py_outs, cpp_outs)
+
+	s += output_diff_table_line("schwefel_2d", py_outs, cpp_outs)
+	s += output_diff_table_line("schwefel_10d", py_outs, cpp_outs)
+	s += output_diff_table_line("schwefel_30d", py_outs, cpp_outs)
+
+	s += output_diff_table_line("rosenbrock", py_outs, cpp_outs)
+	s += output_diff_table_line("schaffer_f6", py_outs, cpp_outs)
+
+	return s
+
+if __name__ == "__main__":
+	# box_plot_lowdim("L-BFGS-B", "lbfgs30", "L-BFGS-30")
+	# box_plot_lowdim("Nelder-Mead", "nelder_mead", "Nelder-Mead")
+	# box_plot_lowdim("CG", "cg_fr", "Conjugate Gradient")
+
+	output_diff_table("L-BFGS-B", "lbfgs30")
+	open("figures/nm_tbl.md", "w").write(output_diff_table("Nelder-Mead", "nelder_mead"))
+	output_diff_table("CG", "cg_fr")
+
+	# plot_initial_points(rosenbrock, 10, "rosenbrock")
+	# plot_initial_points(schaffer_f6, 10, "schaffer_f6")
+	# plot_initial_points(rastrigin, 5.12, "2_rastrigin")
+	# plot_initial_points(sphere, 5, "2_sphere")
+	# plot_initial_points(schwefel, 500, "2_schwefel")
