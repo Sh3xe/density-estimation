@@ -16,8 +16,8 @@ configure_file(
 target_compile_features( advanced_optim_applic PUBLIC cxx_std_20 )
 
 target_include_directories(advanced_optim_applic PUBLIC 
-	fdaPDE-cpp
-	fdaPDE-cpp/fdaPDE/core
+	dependencies/fdaPDE-cpp
+	dependencies/fdaPDE-cpp/fdaPDE/core
 	rapidcsv
 )
 
@@ -25,4 +25,4 @@ find_package (Eigen3 3.3 REQUIRED NO_MODULE)
  
 target_link_libraries(advanced_optim_applic Eigen3::Eigen)
 
-target_precompile_headers(advanced_optim_applic PUBLIC source/pch.hpp)
+# target_precompile_headers(advanced_optim_applic PUBLIC source/pch.hpp)

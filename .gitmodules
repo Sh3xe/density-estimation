@@ -1,4 +1,4 @@
 [submodule "fdaPDE-cpp"]
-	path = fdaPDE-cpp
+	path = dependencies/fdaPDE-cpp
 	url = git@github.com:fdaPDE/fdaPDE-cpp.git
-	branch = stable
+	branch = develop

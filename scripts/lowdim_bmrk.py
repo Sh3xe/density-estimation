@@ -73,7 +73,7 @@ def rastrigin(x: np.ndarray):
 
 def benchmark_problem_scipy(fun, initial_points, method, method_min, title):
 	if method == "L-BFGS-B":
-		options = {"maxiter": MAX_ITER, "maxcor": 30, "eps": STEP}
+		options = {"maxiter": MAX_ITER, "maxcor": 30}
 	else:
 		options = {"maxiter": MAX_ITER}
 
@@ -160,50 +160,31 @@ def test_method(scipy_method, gad_dict):
 	init_rosenbrock = np.loadtxt("data/lowdim_inits/rosenbrock.csv", delimiter=",")
 
 	if scipy_method != None:
-		benchmark_problem_scipy(sphere, init_sphere_2d, scipy_method, np.zeros(2), "Sphere 2D")
-		benchmark_problem_scipy(sphere, init_sphere_10d, scipy_method, np.zeros(10), "Sphere 10D")
-		benchmark_problem_scipy(sphere, init_sphere_30d, scipy_method, np.zeros(30), "Sphere 30D")
-		benchmark_problem_scipy(schwefel, init_schwefel_2d, scipy_method, np.ones(2) * 420.9687, "Schwefel 2D")
-		benchmark_problem_scipy(schwefel, init_schwefel_10d, scipy_method, np.ones(10) * 420.9687, "Schwefel 10D")
-		benchmark_problem_scipy(schwefel, init_schwefel_30d, scipy_method, np.ones(30) * 420.9687, "Schwefel 30D")
-		benchmark_problem_scipy(rastrigin, init_rastrigin_2d, scipy_method, np.zeros(2), "Rastrigin 2D")
-		benchmark_problem_scipy(rastrigin, init_rastrigin_10d, scipy_method, np.zeros(10), "Rastrigin 10D")
-		benchmark_problem_scipy(rastrigin, init_rastrigin_30d, scipy_method, np.zeros(30),"Rastrigin 30D")
-		benchmark_problem_scipy(schaffer_f6, init_schaffer_f6, scipy_method, np.zeros(2), "Schaffer F6")
-		benchmark_problem_scipy(rosenbrock, init_rosenbrock, scipy_method, np.ones(2), "Rosenbrock")
+		benchmark_problem_scipy(sphere, init_sphere_2d, scipy_method, np.zeros(2), "sphere_2d")
+		benchmark_problem_scipy(sphere, init_sphere_10d, scipy_method, np.zeros(10), "sphere_10d")
+		benchmark_problem_scipy(sphere, init_sphere_30d, scipy_method, np.zeros(30), "sphere_30d")
+		benchmark_problem_scipy(schwefel, init_schwefel_2d, scipy_method, np.ones(2) * 420.9687, "schwefel_2d")
+		benchmark_problem_scipy(schwefel, init_schwefel_10d, scipy_method, np.ones(10) * 420.9687, "schwefel_10d")
+		benchmark_problem_scipy(schwefel, init_schwefel_30d, scipy_method, np.ones(30) * 420.9687, "schwefel_30d")
+		benchmark_problem_scipy(rastrigin, init_rastrigin_2d, scipy_method, np.zeros(2), "rastrigin_2d")
+		benchmark_problem_scipy(rastrigin, init_rastrigin_10d, scipy_method, np.zeros(10), "rastrigin_10d")
+		benchmark_problem_scipy(rastrigin, init_rastrigin_30d, scipy_method, np.zeros(30),"rastrigin_30d")
+		benchmark_problem_scipy(schaffer_f6, init_schaffer_f6, scipy_method, np.zeros(2), "schaffer_f6")
+		benchmark_problem_scipy(rosenbrock, init_rosenbrock, scipy_method, np.ones(2), "rosenbrock")
 	elif gad_dict != None:
 		benchmark_problem_gad(sphere, init_sphere_2d, gad_dict, np.zeros(2), "Sphere 2D")
 		benchmark_problem_gad(sphere, init_sphere_10d, gad_dict, np.zeros(10), "Sphere 10D")
 		benchmark_problem_gad(sphere, init_sphere_30d, gad_dict, np.zeros(30), "Sphere 30D")
-		benchmark_problem_gad(schwefel, init_schwefel_2d, gad_dict, np.ones(2) * 420.9687, "Schwefel 2D")
-		benchmark_problem_gad(schwefel, init_schwefel_10d, gad_dict, np.ones(10) * 420.9687, "Schwefel 10D")
-		benchmark_problem_gad(schwefel, init_schwefel_30d, gad_dict, np.ones(30) * 420.9687, "Schwefel 30D")
-		benchmark_problem_gad(rastrigin, init_rastrigin_2d, gad_dict, np.zeros(2), "Rastrigin 2D")
-		benchmark_problem_gad(rastrigin, init_rastrigin_10d, gad_dict, np.zeros(10), "Rastrigin 10D")
-		benchmark_problem_gad(rastrigin, init_rastrigin_30d, gad_dict, np.zeros(30),"Rastrigin 30D")
-		benchmark_problem_gad(schaffer_f6, init_schaffer_f6, gad_dict, np.zeros(2), "Schaffer F6")
-		benchmark_problem_gad(rosenbrock, init_rosenbrock, gad_dict, np.ones(2), "Rosenbrock")
+		benchmark_problem_gad(schwefel, init_schwefel_2d, gad_dict, np.ones(2) * 420.9687, "schwefel_2d")
+		benchmark_problem_gad(schwefel, init_schwefel_10d, gad_dict, np.ones(10) * 420.9687, "schwefel_10d")
+		benchmark_problem_gad(schwefel, init_schwefel_30d, gad_dict, np.ones(30) * 420.9687, "schwefel_30d")
+		benchmark_problem_gad(rastrigin, init_rastrigin_2d, gad_dict, np.zeros(2), "rastrigin_2d")
+		benchmark_problem_gad(rastrigin, init_rastrigin_10d, gad_dict, np.zeros(10), "rastrigin_10d")
+		benchmark_problem_gad(rastrigin, init_rastrigin_30d, gad_dict, np.zeros(30),"rastrigin_30d")
+		benchmark_problem_gad(schaffer_f6, init_schaffer_f6, gad_dict, np.zeros(2), "schaffer_f6")
+		benchmark_problem_gad(rosenbrock, init_rosenbrock, gad_dict, np.ones(2), "rosenbrock")
 
 if __name__ == "__main__":
 	test_method("L-BFGS-B", None)
 	test_method("Nelder-Mead", None)
 	test_method("CG", None)
-
-	# test_method(None, {
-	# 	"parent_selection_type": "tournament",
-	# 	"K_tournament": 2,
-	# 	**DEFAULT_GAD_OPTS
-	# })
-	# test_method(None, {
-	# 	"parent_selection_type": "tournament",
-	# 	"K_tournament": 2,
-	# 	**DEFAULT_GAD_OPTS
-	# })
-	# test_method(None, {
-	# 	"parent_selection_type": "rank",
-	# 	**DEFAULT_GAD_OPTS
-	# })
-	# test_method(None, {
-	# 	"parent_selection_type": "rank",
-	# 	**DEFAULT_GAD_OPTS
-	# })

@@ -146,7 +146,7 @@ DEBenchmarkResult benchmark_one(
 	res.lambda = lambda_prop[0];
 	auto cv_begin_time = std::chrono::high_resolution_clock::now();
 	for(int i = 0; i < lambda_prop.rows(); ++i) {
-		std::cout << "Computing CV err (" << i+1 << "/" << CV_K <<") for " << scenario.title << " " << optimizer_title << std::endl;
+		std::cout << "Computing CV err (" << i+1 << "/" << lambda_prop.rows() <<") for " << scenario.title << " " << optimizer_title << std::endl;
 		double err = cv_error(optimizer, solver, scenario, lambda_prop[i], std::forward<Hooks>(hooks)...);
 		if(err < res.cv_error) {
 			res.cv_error = err;
