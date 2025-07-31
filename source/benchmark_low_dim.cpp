@@ -1,6 +1,8 @@
 #include "benchmark_low_dim.hpp"
 #include <iostream>
 #include <fstream>
+#include <vector>
+#include <cmath>
 #include <ostream>
 #include <fdaPDE/optimization.h>
 #include <Eigen/Dense>
@@ -300,6 +302,12 @@ void lowdim_full_benchmark(bool output_csv) {
 		PolakRibiereCG<fdapde::Dynamic> cg_pr {MAX_ITER, TOL, STEP};
 		auto cg_pr_res = benchmark_optimizer(cg_pr, "cg_pr", output_csv, WolfeLineSearch());
 		print_optim_benchmark(cg_pr_res, "cg_pr", file);
+	}
+
+	{
+		PolakRibierePlsCG<fdapde::Dynamic> cg_prp {MAX_ITER, TOL, STEP};
+		auto cg_prp_res = benchmark_optimizer(cg_prp, "cg_prp", output_csv, WolfeLineSearch());
+		print_optim_benchmark(cg_prp_res, "cg_prp", file);
 	}
 
 	{

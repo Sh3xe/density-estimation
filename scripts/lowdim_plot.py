@@ -95,8 +95,8 @@ def box_plot_diff(py_outs, cpp_outs, method_title, title, ax, use_log=False):
 def box_plot_lowdim(py_name, cpp_name, fig_title):
 	files = os.listdir("outputs")
 	outputs = list(filter(lambda x: ".csv" in x, files))
-	py_outs = list(filter(lambda x: "py" in x and py_name in x, outputs))
-	cpp_outs = list(filter(lambda x: "cpp" in x and cpp_name in x, outputs))
+	py_outs = list(filter(lambda x: "py" in x and py_name + "_" in x, outputs))
+	cpp_outs = list(filter(lambda x: "cpp" in x and cpp_name  + "_" in x, outputs))
 
 	test_cases = ["sphere", "rastrigin", "schwefel"]
 	dimensions = [2, 10, 30]
@@ -224,8 +224,8 @@ def output_diff_table_line(function_name, py_outs, cpp_outs):
 def output_diff_table(py_name, cpp_name):
 	files = os.listdir("outputs")
 	outputs = list(filter(lambda x: ".csv" in x, files))
-	py_outs = list(filter(lambda x: "py" in x and py_name in x, outputs))
-	cpp_outs = list(filter(lambda x: "cpp" in x and cpp_name in x, outputs))
+	py_outs = list(filter(lambda x: "py" in x and py_name + "_" in x, outputs))
+	cpp_outs = list(filter(lambda x: "cpp" in x and cpp_name + "_" in x, outputs))
 
 	s = "Method|Iters|x\\_diff|f\\_diff|duration\n"
 	s += "-|-|-|-|-\n"
@@ -247,14 +247,72 @@ def output_diff_table(py_name, cpp_name):
 
 	return s
 
+
+def output_table_line(function_name, cpp_outs):
+	cpp_csv = list(filter(lambda x: function_name in x, cpp_outs))
+
+	if len(cpp_csv) != 1:
+		print("Cannot find csv file")
+		return
+	
+	cpp_df = pd.read_csv("outputs/" + cpp_csv[0])
+
+	s = ""
+
+	s += "{}|{:.1f} \\textpm {:.1f} |{:.2e} \\textpm {:.2e}|{:.2e}\\textpm {:.2e}|{}\\textpm {}\n".format(
+		function_name.replace("_", "\\_"),
+		cpp_df["nit"].mean(), cpp_df["nit"].std(),
+		cpp_df["x_diff"].mean(), cpp_df["x_diff"].std(),
+		cpp_df["f_diff"].mean(), cpp_df["f_diff"].std(),
+		duration_to_str(cpp_df["duration_microsec"].mean()), duration_to_str(cpp_df["duration_microsec"].std()),
+		)
+	
+	return s
+
+def output_table(method_name):
+	files = os.listdir("outputs")
+	outputs = list(filter(lambda x: ".csv" in x, files))
+	cpp_outs = list(filter(lambda x: "cpp" in x and method_name in x, outputs))
+
+	s = "Method|Iters|x\\_diff|f\\_diff|duration\n"
+	s += "-|-|-|-|-\n"
+
+	s += output_table_line("sphere_2d", cpp_outs)
+	s += output_table_line("sphere_10d", cpp_outs)
+	s += output_table_line("sphere_30d", cpp_outs)
+
+	s += output_table_line("rastrigin_2d", cpp_outs)
+	s += output_table_line("rastrigin_10d", cpp_outs)
+	s += output_table_line("rastrigin_30d", cpp_outs)
+
+	s += output_table_line("schwefel_2d", cpp_outs)
+	s += output_table_line("schwefel_10d", cpp_outs)
+	s += output_table_line("schwefel_30d", cpp_outs)
+
+	s += output_table_line("rosenbrock", cpp_outs)
+	s += output_table_line("schaffer_f6", cpp_outs)
+
+	return s
+
 if __name__ == "__main__":
 	# box_plot_lowdim("L-BFGS-B", "lbfgs30", "L-BFGS-30")
 	# box_plot_lowdim("Nelder-Mead", "nelder_mead", "Nelder-Mead")
-	# box_plot_lowdim("CG", "cg_fr", "Conjugate Gradient")
+	# box_plot_lowdim("CG", "cg_fr", "CG_FR")
+	# box_plot_lowdim("CG", "cg_pr", "CG_PR")
+	# box_plot_lowdim("CG", "cg_prp", "CG_PRP")
 
-	output_diff_table("L-BFGS-B", "lbfgs30")
-	open("figures/nm_tbl.md", "w").write(output_diff_table("Nelder-Mead", "nelder_mead"))
-	output_diff_table("CG", "cg_fr")
+	s  = "### {}\n{}\n".format("LBFGS30", output_diff_table("L-BFGS-B", "lbfgs30") )
+	s += "### {}\n{}\n".format("Nelder-Mead", output_diff_table("Nelder-Mead", "nelder_mead") )
+	s += "### {}\n{}\n".format("CGFR", output_diff_table("CG", "cg_fr") )
+	s += "### {}\n{}\n".format("CGPR", output_diff_table("CG", "cg_pr") )
+	s += "### {}\n{}\n".format("CGPRP", output_diff_table("CG", "cg_prp") )
+	open("figures/nm_tbl.md", "w").write(s)
+
+	# s = output_table("genetic_bin_co") + "\n"
+	# s += output_table("genetic_bin_gaus") + "\n"
+	# s += output_table("genetic_rk_co") + "\n"
+	# s += output_table("genetic_rk_gaus") + "\n"
+	# open("figures/genetics.md", "w").write(s)
 
 	# plot_initial_points(rosenbrock, 10, "rosenbrock")
 	# plot_initial_points(schaffer_f6, 10, "schaffer_f6")
