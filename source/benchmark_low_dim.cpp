@@ -108,6 +108,28 @@ struct Sphere {
 	}
 };
 
+struct EvalCounterHook {
+	EvalCounterHook() {reset();}
+
+	void reset() {
+		obj_eval_count = 0;
+		grad_eval_count = 0;
+	}
+
+	template <typename Opt, typename Obj> bool exec_grad_hooks(Opt& opt, Obj& obj) {
+		++grad_eval_count;
+		return false;
+	}
+
+	template <typename Opt, typename Obj> bool exec_eval_hooks(Opt& opt, Obj& obj) {
+		++obj_eval_count;
+		return false;
+	}
+
+	int obj_eval_count {0};
+	int grad_eval_count {0};
+};
+
 struct LDBenchmarkResult {
 	std::string title;
 	microsec duration;
@@ -137,12 +159,14 @@ LDBenchmarkResult benchmark_function(
 	Hooks &&...hooks
 ) {
 	// [nit, x_diff, f_diff, p_id, duration_microsec]
-	MatrixXd df = MatrixXd::Zero(init_pts.rows(), 5);
+	MatrixXd df = MatrixXd::Zero(init_pts.rows(), 7);
+	EvalCounterHook eval_count_hook;
 
 	for(int i = 0; i < init_pts.rows(); ++i) {
 		// Perform benchmark on one initial point
+		eval_count_hook.reset();
 		auto begin_time = std::chrono::high_resolution_clock::now();
-		opt.optimize(func, init_pts.row(i), std::forward<Hooks>(hooks)...);
+		opt.optimize(func, init_pts.row(i), eval_count_hook, std::forward<Hooks>(hooks)...);
 		auto end_time = std::chrono::high_resolution_clock::now();
 		double duration = microsec(end_time - begin_time).count();
 
@@ -152,6 +176,8 @@ LDBenchmarkResult benchmark_function(
 		df(i, 2) = std::abs(real_min - opt.value());
 		df(i, 3) = (double)i;
 		df(i, 4) = duration;
+		df(i, 5) = (double)eval_count_hook.obj_eval_count;
+		df(i, 6) = (double)eval_count_hook.grad_eval_count;
 	}
 
 	if(output_csv) {
@@ -159,7 +185,7 @@ LDBenchmarkResult benchmark_function(
 		
 		utils::write_csv(
 			file_title,
-			{"nit","x_diff","f_diff","p_id","duration_microsec"},
+			{"nit","x_diff","f_diff","p_id","duration_microsec", "obj_eval", "grad_eval"},
 			df
 		);
 	}
@@ -190,7 +216,7 @@ std::vector<LDBenchmarkResult> benchmark_optimizer(
 	// Benchmark the method on different functions and print the result to markdown in the standard output
 	std::vector<int> dims {2,10,30};
 	std::vector<LDBenchmarkResult> res; res.reserve(11);
-
+	 
 	for(auto &d: dims) {
 		fdapde::ScalarField<fdapde::Dynamic, Sphere> shpere_func(d);
 		res.push_back(benchmark_function(
@@ -278,7 +304,6 @@ void lowdim_full_benchmark(bool output_csv) {
 		std::cerr << "Cannot write to \"outputs/cpp_bmrk_table.md\"";
 		return;
 	}
-	file << std::scientific << std::setprecision(2);
 
 	{
 		BFGS<fdapde::Dynamic> bfgs {MAX_ITER, TOL, STEP};
@@ -316,27 +341,16 @@ void lowdim_full_benchmark(bool output_csv) {
 		print_optim_benchmark(nelder_mead_res, "nelder_mead", file);
 	}
 
-	// {
-	// 	GeneticOptim<fdapde::Dynamic> genetic_bin_gaus {MAX_ITER, TOL, 5, 30};
-	// 	auto genetic_bin_gaus_res = benchmark_optimizer(genetic_bin_gaus, "genetic_bin_gaus", output_csv, BinaryTournamentSelection(), GaussianMutation());
-	// 	print_optim_benchmark(genetic_bin_gaus_res, "genetic_bin_gaus", file);
-	// }
+	{
+		GeneticOptim<fdapde::Dynamic> genetic_bin_co {MAX_ITER, TOL, 5, 30};
+		auto genetic_bin_co_res = benchmark_optimizer(genetic_bin_co, "genetic_bin_co", output_csv, BinaryTournamentSelection(),GaussianMutation());
+		print_optim_benchmark(genetic_bin_co_res, "genetic_bin_co", file);
+	}
 
-	// {
-	// 	GeneticOptim<fdapde::Dynamic> genetic_bin_co {MAX_ITER, TOL, 5, 30};
-	// 	auto genetic_bin_co_res = benchmark_optimizer(genetic_bin_co, "genetic_bin_co", output_csv, BinaryTournamentSelection(), CrossoverMutation(), GaussianMutation());
-	// 	print_optim_benchmark(genetic_bin_co_res, "genetic_bin_co", file);
-	// }
+	{
+		GeneticOptim<fdapde::Dynamic> genetic_rk_gaus {MAX_ITER, TOL, 5, 30};
+		auto genetic_rk_gaus_res = benchmark_optimizer(genetic_rk_gaus, "genetic_rk_gaus", output_csv, RankSelection(), GaussianMutation());
+		print_optim_benchmark(genetic_rk_gaus_res, "genetic_rk_gaus", file);
+	}
 
-	// {
-	// 	GeneticOptim<fdapde::Dynamic> genetic_rk_gaus {MAX_ITER, TOL, 5, 30};
-	// 	auto genetic_rk_gaus_res = benchmark_optimizer(genetic_rk_gaus, "genetic_rk_gaus", output_csv, RankSelection(), GaussianMutation());
-	// 	print_optim_benchmark(genetic_rk_gaus_res, "genetic_rk_gaus", file);
-	// }
-
-	// {
-	// 	GeneticOptim<fdapde::Dynamic> genetic_rk_co {MAX_ITER, TOL, 5, 30};
-	// 	auto genetic_rk_co_res = benchmark_optimizer(genetic_rk_co, "genetic_rk_co", output_csv, RankSelection(), CrossoverMutation(), GaussianMutation());
-	// 	print_optim_benchmark(genetic_rk_co_res, "genetic_rk_co", file);
-	// }
 }
