@@ -74,6 +74,8 @@ def rastrigin(x: np.ndarray):
 def benchmark_problem_scipy(fun, initial_points, method, method_min, title):
 	if method == "L-BFGS-B":
 		options = {"maxiter": MAX_ITER, "maxcor": 30}
+	elif method == "Nelder-Mead":
+		options = {"maxiter": MAX_ITER, "fatol": TOL, "adaptive": True}
 	else:
 		options = {"maxiter": MAX_ITER}
 

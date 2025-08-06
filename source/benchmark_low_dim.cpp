@@ -305,52 +305,51 @@ void lowdim_full_benchmark(bool output_csv) {
 		return;
 	}
 
-	{
-		BFGS<fdapde::Dynamic> bfgs {MAX_ITER, TOL, STEP};
-		auto bfgs_res = benchmark_optimizer(bfgs, "bfgs", output_csv, WolfeLineSearch());
-		print_optim_benchmark(bfgs_res, "bfgs", file);
-	}
+	// {
+	// 	BFGS<fdapde::Dynamic> bfgs {MAX_ITER, TOL, STEP};
+	// 	auto bfgs_res = benchmark_optimizer(bfgs, "bfgs", output_csv, WolfeLineSearch());
+	// 	print_optim_benchmark(bfgs_res, "bfgs", file);
+	// }
 
-	{
-		LBFGS<fdapde::Dynamic> lbfgs30 {MAX_ITER, TOL, STEP, 30};
-		auto lbfgs30_res = benchmark_optimizer(lbfgs30, "lbfgs30", output_csv, WolfeLineSearch());
-		print_optim_benchmark(lbfgs30_res, "lbfgs30", file);
-	}
+	// {
+	// 	LBFGS<fdapde::Dynamic> lbfgs30 {MAX_ITER, TOL, STEP, 30};
+	// 	auto lbfgs30_res = benchmark_optimizer(lbfgs30, "lbfgs30", output_csv, WolfeLineSearch());
+	// 	print_optim_benchmark(lbfgs30_res, "lbfgs30", file);
+	// }
 
-	{
-		FletcherReevesCG<fdapde::Dynamic> cg_fr {MAX_ITER, TOL, STEP};
-		auto cg_fr_res = benchmark_optimizer(cg_fr, "cg_fr", output_csv, WolfeLineSearch());
-		print_optim_benchmark(cg_fr_res, "cg_fr", file);
-	}
+	// {
+	// 	FletcherReevesCG<fdapde::Dynamic> cg_fr {MAX_ITER, TOL, STEP};
+	// 	auto cg_fr_res = benchmark_optimizer(cg_fr, "cg_fr", output_csv, WolfeLineSearch());
+	// 	print_optim_benchmark(cg_fr_res, "cg_fr", file);
+	// }
 		
 	{
-		PolakRibiereCG<fdapde::Dynamic> cg_pr {MAX_ITER, TOL, STEP};
-		auto cg_pr_res = benchmark_optimizer(cg_pr, "cg_pr", output_csv, WolfeLineSearch());
-		print_optim_benchmark(cg_pr_res, "cg_pr", file);
+		PolakRibiereCG<fdapde::Dynamic> cg_pr {MAX_ITER, TOL, STEP, true};
+		auto cg_pr_res = benchmark_optimizer(cg_pr, "cg_pr_restart", output_csv, WolfeLineSearch());
+		print_optim_benchmark(cg_pr_res, "cg_pr_restart", file);
 	}
 
 	{
-		PolakRibierePlsCG<fdapde::Dynamic> cg_prp {MAX_ITER, TOL, STEP};
-		auto cg_prp_res = benchmark_optimizer(cg_prp, "cg_prp", output_csv, WolfeLineSearch());
-		print_optim_benchmark(cg_prp_res, "cg_prp", file);
+		PolakRibierePlsCG<fdapde::Dynamic> cg_prp {MAX_ITER, TOL, STEP, true};
+		auto cg_prp_res = benchmark_optimizer(cg_prp, "cg_prp_restart", output_csv, WolfeLineSearch());
+		print_optim_benchmark(cg_prp_res, "cg_prp_restart", file);
 	}
 
-	{
-		NelderMead<fdapde::Dynamic> nelder_mead {MAX_ITER, TOL};
-		auto nelder_mead_res = benchmark_optimizer(nelder_mead, "nelder_mead", output_csv);
-		print_optim_benchmark(nelder_mead_res, "nelder_mead", file);
-	}
+	// {
+	// 	NelderMead<fdapde::Dynamic> nelder_mead {MAX_ITER, TOL};
+	// 	auto nelder_mead_res = benchmark_optimizer(nelder_mead, "nelder_mead", output_csv);
+	// 	print_optim_benchmark(nelder_mead_res, "nelder_mead", file);
+	// }
 
-	{
-		GeneticOptim<fdapde::Dynamic> genetic_bin_co {MAX_ITER, TOL, 5, 30};
-		auto genetic_bin_co_res = benchmark_optimizer(genetic_bin_co, "genetic_bin_co", output_csv, BinaryTournamentSelection(),GaussianMutation());
-		print_optim_benchmark(genetic_bin_co_res, "genetic_bin_co", file);
-	}
+	// {
+	// 	GeneticOptim<fdapde::Dynamic> genetic_bin_co {MAX_ITER, TOL, 5, 30};
+	// 	auto genetic_bin_co_res = benchmark_optimizer(genetic_bin_co, "genetic_bin_co", output_csv, BinaryTournamentSelection(),GaussianMutation());
+	// 	print_optim_benchmark(genetic_bin_co_res, "genetic_bin_co", file);
+	// }
 
-	{
-		GeneticOptim<fdapde::Dynamic> genetic_rk_gaus {MAX_ITER, TOL, 5, 30};
-		auto genetic_rk_gaus_res = benchmark_optimizer(genetic_rk_gaus, "genetic_rk_gaus", output_csv, RankSelection(), GaussianMutation());
-		print_optim_benchmark(genetic_rk_gaus_res, "genetic_rk_gaus", file);
-	}
-
+	// {
+	// 	GeneticOptim<fdapde::Dynamic> genetic_rk_gaus {MAX_ITER, TOL, 5, 30};
+	// 	auto genetic_rk_gaus_res = benchmark_optimizer(genetic_rk_gaus, "genetic_rk_gaus", output_csv, RankSelection(), GaussianMutation());
+	// 	print_optim_benchmark(genetic_rk_gaus_res, "genetic_rk_gaus", file);
+	// }
 }

@@ -16,10 +16,11 @@ segments <- cbind(1:dim(nodes)[1], c(2:dim(nodes)[1], 1))
 
 # Define the mesh
 mesh <- create.mesh.2D(nodes = nodes, segments = segments)
-mesh <- refine.mesh.2D(mesh, maximum_area = 4.25, minimum_angle = 25)
+mesh <- refine.mesh.2D(mesh, maximum_area = 2.0, minimum_angle = 25)
 
 # Set up the finite element basis
 FEMbasis <- create.FEM.basis(mesh = mesh)
+# plot.mesh.2D.map(mesh = mesh)
 
 # Import the data
 data <- cbind(xyt$x, xyt$y)
@@ -31,7 +32,7 @@ write.csv(mesh$triangles, file.path(directory, "mesh_elements.csv"))
 write.csv(mesh$nodesmarker, file.path(directory, "mesh_boundary.csv"))
 
 # Calculate f_init
-lambda_proposal <- 10^seq(from = -1, to = -5, by = -0.5)
+lambda_proposal <- 10^seq(from = 3, to = -3, by = -0.5)
 
 de <- DE.FEM(
 	data=data,
@@ -55,7 +56,7 @@ sample <- read.csv(file.path(directory, "sample.csv"))
 log_dens <- read.csv("./outputs/cpp_lbfgs30_infections_southampton_log_density.csv")
 
 # Plot
-FEMfunction <- FEM(coeff = log_dens$V0, FEMbasis = FEMbasis)
+FEMfunction <- FEM(coeff = log_dens, FEMbasis = FEMbasis)
 evaluation <- eval.FEM(FEM = FEMfunction, locations = mesh$nodes)
 estimated_density <- exp(evaluation)
 plot.density.2D.map(coeff = estimated_density, mesh = mesh, colorscale = "viridis")

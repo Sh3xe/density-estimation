@@ -25,7 +25,7 @@ mesh <- refine.mesh.2D(mesh = mesh, maximum_area = 0.025)
 
 # Set up the finite element basis
 FEMbasis <- create.FEM.basis(mesh = mesh)
-plot.mesh.2D(mesh = mesh)
+# plot.mesh.2D(mesh = mesh)
 
 # Generate the data
 n <- 1000
@@ -40,7 +40,7 @@ write.csv(mesh$nodesmarker, file.path(output_dir, "mesh_boundary.csv"))
 write.csv(data, file.path(output_dir, "sample.csv"))
 
 # Calculate f_init
-lambda_proposal <- 10^seq(from = -1, to = -5, by = -1)
+lambda_proposal <- 10^seq(from = 2, to = -3, by = -1)
 
 de <- DE.FEM(
 	data = data,
@@ -75,7 +75,7 @@ mesh.eval <- create.mesh.2D(nodes = grid)
 # Set up the finite element basis
 FEMbasis.eval <- create.FEM.basis(mesh = mesh.eval)
 
-estimated_log_dens <- read.csv("outputs/cpp_lbfgs30_horseshoe_log_density.csv")
+estimated_log_dens <- read.csv("outputs/cpp_cg_pr_horseshoe_log_density.csv")
 FEMfunction <- FEM(coeff = estimated_log_dens, FEMbasis = FEMbasis)
 evaluation <- eval.FEM(FEM = FEMfunction, locations = mesh.eval$nodes)
 

@@ -92,7 +92,7 @@ std::pair< MatrixXd, MatrixXd > split_dataset( const MatrixXd &dataset, size_t k
  */
 VectorXd gen_lambda_prop(double from, double to, double incr) {
 	std::vector<double> props;
-	for(double exponent = from; exponent < to; exponent += incr) {
+	for(double exponent = from; exponent <= to + 1e-4; exponent += incr) {
 		props.push_back(std::pow(10.0, exponent));
 	}
 
@@ -176,7 +176,8 @@ DEBenchmarkResult benchmark_one(
 	for(int i = 0; i < lambda_prop.rows(); ++i) {
 		std::cout << "Computing CV err (" << i+1 << "/" << lambda_prop.rows() <<") for " << scenario.title << " " << optimizer_title << std::endl;
 		double err = cv_error(optimizer, solver, scenario, lambda_prop[i], std::forward<Hooks>(hooks)...);
-		if(err < res.cv_error) {
+		std::cout << "CV err for " << lambda_prop[i]<< " " << optimizer_title << " = " << err << std::endl;
+		if(err < res.cv_error && !std::isnan(err)) {
 			res.cv_error = err;
 			res.lambda = lambda_prop[i];
 		}
@@ -206,25 +207,25 @@ std::vector<DEBenchmarkResult> benchmark_all_opt(DETestScenarioType &scenario, c
 	std::cout << "Starting benchmark for " << scenario.title << std::endl;
 
 	{
-		auto lbfgs30 = fdapde::LBFGS<fdapde::Dynamic> {MAX_ITERATIONS, ERR_TOL, STEP_SIZE, 30};
+		auto lbfgs30 = fdapde::LBFGS<fdapde::Dynamic> {MAX_ITERATIONS, ERR_TOL, STEP_SIZE, 10};
 		results.push_back(benchmark_one(
-			lbfgs30, scenario, lambda_prop, "lbfgs30",
+			lbfgs30, scenario, lambda_prop, "LBFGS10",
 			fdapde::WolfeLineSearch()
 		));
-		std::cout << scenario.title << ": lbfgs30 done" << std::endl;
+		std::cout << scenario.title << ": LBFGS10 done" << std::endl;
 	}
 
 	{
-		auto grad_descent = fdapde::GradientDescent<fdapde::Dynamic> {MAX_ITERATIONS, ERR_TOL, STEP_SIZE};
+		auto bfgs = fdapde::BFGS<fdapde::Dynamic> {MAX_ITERATIONS, ERR_TOL, STEP_SIZE};
 		results.push_back(benchmark_one(
-			grad_descent, scenario, lambda_prop,"grad_descent",
+			bfgs, scenario, lambda_prop,"BFGS",
 			fdapde::WolfeLineSearch()
 		));
-		std::cout << scenario.title << ": grad_descent done" << std::endl;
+		std::cout << scenario.title << ": BFGS done" << std::endl;
 	}
 
 	{
-		auto cg_pr = fdapde::PolakRibiereCG<fdapde::Dynamic> {MAX_ITERATIONS, ERR_TOL, STEP_SIZE};
+		auto cg_pr = fdapde::PolakRibiereCG<fdapde::Dynamic> {MAX_ITERATIONS, ERR_TOL, STEP_SIZE, true};
 		results.push_back(benchmark_one(
 			cg_pr, scenario, lambda_prop, "cg_pr",
 			fdapde::WolfeLineSearch()
@@ -233,7 +234,7 @@ std::vector<DEBenchmarkResult> benchmark_all_opt(DETestScenarioType &scenario, c
 	}
 
 	{
-		auto cg_fr = fdapde::FletcherReevesCG<fdapde::Dynamic> {MAX_ITERATIONS, ERR_TOL, STEP_SIZE};
+		auto cg_fr = fdapde::FletcherReevesCG<fdapde::Dynamic> {MAX_ITERATIONS, ERR_TOL, STEP_SIZE, true};
 		results.push_back(benchmark_one(
 			cg_fr, scenario, lambda_prop, "cg_fr",
 			fdapde::WolfeLineSearch()
@@ -292,14 +293,15 @@ DETestScenario<Triangulation<2, 2>> load_test_2d(const std::string &dir_name) {
 		true, true
 	);
 
-	ScalarField<2, decltype([](const Eigen::VectorXd& p) { return 1.0; })> constant_unit;
-	double area = integral(space_discr, QS2DP4)(constant_unit);
-	Eigen::VectorXd g_init = Eigen::VectorXd::Constant(space_discr.nodes().rows(), 1, std::log(1.0/area));
-	
-	// Data
 	Eigen::MatrixXd dataset =
 		read_csv<double>(dir / path("sample.csv"))
 		.as_matrix();
+
+	Eigen::VectorXd g_init =
+		read_csv<double>(dir / path("f_init.csv"))
+		.as_matrix()
+		.array()
+		.log();
 
 	std::cout << "Done loading 2D " << dir_name << std::endl;
 	
@@ -324,10 +326,6 @@ DETestScenario<Triangulation<2, 3>> load_test_2_5d(const std::string &dir_name) 
 		.array()
 		.log();
 
-	// ScalarField<2, decltype([](const Eigen::VectorXd& p) { return 1.0; })> constant_unit;
-	// double area = integral(space_discr, QS2DP4)(constant_unit);
-	// Eigen::VectorXd g_init = Eigen::VectorXd::Constant(space_discr.nodes().rows(), 1, std::log(1.0/area));
-	
 	// Data
 	Eigen::MatrixXd dataset =
 		read_csv<double>(dir / path("sample.csv"))
@@ -350,15 +348,11 @@ DETestScenario<Triangulation<1, 2>> load_test_1_5_d(const std::string &dir_name)
 		true, true
 	);
 	
-	// Compute the integral over the whole domain for f_init
-	double total_length = 0.0;
-	for(int i = 0; i < space_discr.cells().rows(); ++i) {
-		const VectorXi &cell = space_discr.cells().row(i);
-		const auto &p1 = space_discr.nodes().row(cell[0]);
-		const auto &p2 = space_discr.nodes().row(cell[1]);
-		total_length += (p2 - p1).norm();
-	}
-	Eigen::VectorXd g_init = Eigen::VectorXd::Constant(space_discr.nodes().rows(), 1, std::log(1.0/total_length));
+	Eigen::VectorXd g_init =
+		read_csv<double>(dir / path("f_init.csv"))
+		.as_matrix()
+		.array()
+		.log();
 
 	// Data
 	Eigen::MatrixXd dataset =
@@ -368,23 +362,6 @@ DETestScenario<Triangulation<1, 2>> load_test_1_5_d(const std::string &dir_name)
 	std::cout << "Done loading 1.5D " << dir_name << std::endl;
 	
 	return DETestScenario<Triangulation<1, 2>>(dir_name, std::move(dataset), std::move(g_init), std::move(space_discr) );
-}
-
-DETestScenario<Triangulation<1, 1>> load_test_snp500(const std::string &dir_name) {
-	auto dir = path(ROOT_DIR) / path("data") / path(dir_name);
-	
-	// Data loading
-	Eigen::VectorXd dataset = read_csv<double>( dir / path("data_space.csv"), true, true).as_matrix();
-	double min = dataset.minCoeff();
-	double max = dataset.maxCoeff();	
-	constexpr int subdivisions = 300;
-	
-	// Geometry definition
-	Triangulation<1, 1> space_discr(min - 1.0, max + 1.0, subdivisions);
-
-	Eigen::VectorXd g_init = Eigen::VectorXd::Constant(subdivisions, 1, 1.0 / static_cast<double>(subdivisions));
-
-	return DETestScenario<Triangulation<1, 1>>(dir_name, std::move(dataset), std::move(g_init), std::move(space_discr) );
 }
 
 void de_full_benchmark(bool output_csv)
@@ -399,26 +376,26 @@ void de_full_benchmark(bool output_csv)
 	// Creating one thread per benchmark
 	std::vector<std::thread> workers;
 
-	workers.emplace_back( [&](){
-		auto gaussian_square = load_test_2d("gaussian_square");
-		auto gaussian_square_res = benchmark_all_opt(gaussian_square, gen_lambda_prop(-5.0, -1.0, 0.5));
-		print_benchmark_md(gaussian_square_res, output_file);
-		if(output_csv) save_log_densities(gaussian_square_res);
-	});
+	// workers.emplace_back( [&](){
+	// 	auto gaussian_square = load_test_2d("gaussian_square");
+	// 	auto gaussian_square_res = benchmark_all_opt(gaussian_square, gen_lambda_prop(-1.0, 3.0, 1.0));
+	// 	print_benchmark_md(gaussian_square_res, output_file);
+	// 	if(output_csv) save_log_densities(gaussian_square_res);
+	// });
 
 	workers.emplace_back([&](){	
 		auto infections_southampton = load_test_2d("infections_southampton");
-		auto infections_southampton_res = benchmark_all_opt(infections_southampton, gen_lambda_prop(-5.0, -1.0, 1.0));
+		auto infections_southampton_res = benchmark_all_opt(infections_southampton, gen_lambda_prop(-2.0, 2.0, 1.0));
 		print_benchmark_md(infections_southampton_res, output_file);
 		if(output_csv) save_log_densities(infections_southampton_res);
 	});
 
-	workers.emplace_back([&](){
-		auto horseshoe = load_test_2d("horseshoe");
-		auto horseshoe_res = benchmark_all_opt(horseshoe, gen_lambda_prop(-5.0, -1.0, 1.0));
-		print_benchmark_md(horseshoe_res, output_file);
-		if(output_csv) save_log_densities(horseshoe_res);
-	});
+	// workers.emplace_back([&](){
+	// 	auto horseshoe = load_test_2d("horseshoe");
+	// 	auto horseshoe_res = benchmark_all_opt(horseshoe, gen_lambda_prop(-1.0, 3.0, 1.0));
+	// 	print_benchmark_md(horseshoe_res, output_file);
+	// 	if(output_csv) save_log_densities(horseshoe_res);
+	// });
 
 	// workers.emplace_back([&](){
 	// 	auto kent_sphere = load_test_2_5d("kent_sphere");

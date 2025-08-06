@@ -72,7 +72,7 @@ def plot_function_graph(function, bound, png_name):
 	plt.close()
 
 def box_plot_data(axis, use_log, data, tick_labels, img_name):
-	axis.set_ylabel('||x-x*||')
+	axis.set_ylabel("||f-f*||")
 	medianprops = dict(linestyle='-', linewidth=1.0, color='black')
 	if use_log:
 		axis.set_yscale("log")
@@ -115,9 +115,9 @@ def box_plot_lowdim(py_name, cpp_name, fig_title):
 			py_csv = list(filter(lambda x: method_title in x, py_outs))
 			cpp_csv = list(filter(lambda x: method_title in x, cpp_outs))
 			assert(len(py_csv) == 1 and len(cpp_csv) == 1)
-			data.append( pd.read_csv("outputs/" + cpp_csv[0])["x_diff"].to_numpy() )
+			data.append( pd.read_csv("outputs/" + cpp_csv[0])["f_diff"].to_numpy() )
 			tick_labels.append(f"{dim}D")
-			data.append( pd.read_csv("outputs/" + py_csv[0])["x_diff"].to_numpy() )
+			data.append( pd.read_csv("outputs/" + py_csv[0])["f_diff"].to_numpy() )
 			tick_labels.append(f"{dim}D")
 			fig, axis = plt.subplots()
 		box_plot_data(axis, use_log, data, tick_labels, f"lowdim_comp_{test_case}_{cpp_name}")
@@ -129,8 +129,8 @@ def box_plot_lowdim(py_name, cpp_name, fig_title):
 		py_csv = list(filter(lambda x: test_case in x, py_outs))
 		cpp_csv = list(filter(lambda x: test_case in x, cpp_outs))
 		assert(len(py_csv) == 1 and len(cpp_csv) == 1)
-		data.append( pd.read_csv("outputs/" + cpp_csv[0])["x_diff"].to_numpy() )
-		data.append( pd.read_csv("outputs/" + py_csv[0])["x_diff"].to_numpy() )
+		data.append( pd.read_csv("outputs/" + cpp_csv[0])["f_diff"].to_numpy() )
+		data.append( pd.read_csv("outputs/" + py_csv[0])["f_diff"].to_numpy() )
 		
 	box_plot_data(ax, True, data, ["Rs", "Rs", "Sc", "Sc"], "lowdim_comp_{}_{}".format("_".join(other_test_cases), cpp_name))
 	plt.close()	
@@ -336,9 +336,8 @@ if __name__ == "__main__":
 
 	# box_plot_lowdim("L-BFGS-B", "lbfgs30", "L-BFGS-30")
 	# box_plot_lowdim("Nelder-Mead", "nelder_mead", "Nelder-Mead")
-	# box_plot_lowdim("CG", "cg_fr", "CG_FR")
-	# box_plot_lowdim("CG", "cg_pr", "CG_PR")
-	# box_plot_lowdim("CG", "cg_prp", "CG_PRP")
+	# box_plot_lowdim("CG", "cg_pr_restart", "CG_PR")
+	# box_plot_lowdim("CG", "cg_prp_restart", "CG_PRP")
 
 	# s  = "### {}\n{}\n".format("LBFGS30", output_diff_table("L-BFGS-B", "lbfgs30") )
 	# s += "### {}\n{}\n".format("Nelder-Mead", output_diff_table("Nelder-Mead", "nelder_mead") )
