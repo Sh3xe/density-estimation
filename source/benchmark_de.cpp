@@ -60,7 +60,7 @@ struct DETestScenario {
 
 
 /**
- * @brief Generate a pair of (Eigen::MatrixXd, test_set) of size (SIZE*(k-1/k), SIZE/k)
+ * @brief Generate a pair of (train_set, test_set) of size (SIZE*(k-1/k), SIZE/k)
  * 
  * @param dataset original training set
  * @param k number of subdivisions of the training set
@@ -114,6 +114,7 @@ double cv_error(
 	DEPDESolver &solver,
 	DETestScenario<SpaceTriangulation> &scenario,
 	double lambda,
+	const std::string &opt_name,
 	Hooks &&...hooks
 ) {
 	double err_tot = 0.0;
@@ -125,20 +126,23 @@ double cv_error(
 
 		auto& sample = geo_data.template insert_scalar_layer<fdapde::POINT>("sample", train_set);
 		fdapde::DEPDE<typename DEPDESolver::solver_t> model(geo_data, solver);
+
 		model.set_llik_tolerance(LINK_TOL);
 
 		// Solve
 		model.fit(lambda, scenario.g_init, optimizer, std::forward<Hooks>(hooks)...);
 
 		// Compute the error on the test set
-		fdapde::FeSpace Vh(scenario.discretization, fdapde::P1<1>);
-		fdapde::FeFunction log_dens_func(Vh, model.log_density());
+		// fdapde::FeSpace Vh(scenario.discretization, fdapde::P1<1>);
+		// fdapde::FeFunction log_dens_func(Vh, model.log_density());
+		write_csv("cv_csv/cpp#" + std::to_string(i) + "#" + opt_name + "#" + std::to_string(lambda) + "#" + scenario.title + ".csv", model.log_density());
+		
 
-		double err = 0.0;
-		for(int i = 0; i < test_set.rows(); ++i) {
-			err -= log_dens_func(test_set.row(i));
-		}
-		err_tot += err / static_cast<double>(test_set.rows());
+		// double err = 0.0;
+		// for(int i = 0; i < test_set.rows(); ++i) {
+		// 	err -= log_dens_func(test_set.row(i));
+		// }
+		// err_tot += err / static_cast<double>(test_set.rows());
 	}
 
 	return err_tot / static_cast<double>(CV_K);
@@ -175,8 +179,8 @@ DEBenchmarkResult benchmark_one(
 	auto cv_begin_time = std::chrono::high_resolution_clock::now();
 	for(int i = 0; i < lambda_prop.rows(); ++i) {
 		std::cout << "Computing CV err (" << i+1 << "/" << lambda_prop.rows() <<") for " << scenario.title << " " << optimizer_title << std::endl;
-		double err = cv_error(optimizer, solver, scenario, lambda_prop[i], std::forward<Hooks>(hooks)...);
-		std::cout << "CV err for " << lambda_prop[i]<< " " << optimizer_title << " = " << err << std::endl;
+		double err = cv_error(optimizer, solver, scenario, lambda_prop[i], optimizer_title, std::forward<Hooks>(hooks)...);
+		std::cout << "CV err for " << lambda_prop[i]<< " " << optimizer_title << " = " << err << ", " << scenario.title << std::endl;
 		if(err < res.cv_error && !std::isnan(err)) {
 			res.cv_error = err;
 			res.lambda = lambda_prop[i];
@@ -207,15 +211,6 @@ std::vector<DEBenchmarkResult> benchmark_all_opt(DETestScenarioType &scenario, c
 	std::cout << "Starting benchmark for " << scenario.title << std::endl;
 
 	{
-		auto lbfgs30 = fdapde::LBFGS<fdapde::Dynamic> {MAX_ITERATIONS, ERR_TOL, STEP_SIZE, 10};
-		results.push_back(benchmark_one(
-			lbfgs30, scenario, lambda_prop, "LBFGS10",
-			fdapde::WolfeLineSearch()
-		));
-		std::cout << scenario.title << ": LBFGS10 done" << std::endl;
-	}
-
-	{
 		auto bfgs = fdapde::BFGS<fdapde::Dynamic> {MAX_ITERATIONS, ERR_TOL, STEP_SIZE};
 		results.push_back(benchmark_one(
 			bfgs, scenario, lambda_prop,"BFGS",
@@ -225,21 +220,21 @@ std::vector<DEBenchmarkResult> benchmark_all_opt(DETestScenarioType &scenario, c
 	}
 
 	{
+		auto lbfgs30 = fdapde::LBFGS<fdapde::Dynamic> {MAX_ITERATIONS, ERR_TOL, STEP_SIZE, 10};
+		results.push_back(benchmark_one(
+			lbfgs30, scenario, lambda_prop, "LBFGS10",
+			fdapde::WolfeLineSearch()
+		));
+		std::cout << scenario.title << ": LBFGS10 done" << std::endl;
+	}
+
+	{
 		auto cg_pr = fdapde::PolakRibiereCG<fdapde::Dynamic> {MAX_ITERATIONS, ERR_TOL, STEP_SIZE, true};
 		results.push_back(benchmark_one(
 			cg_pr, scenario, lambda_prop, "cg_pr",
 			fdapde::WolfeLineSearch()
 		));
 		std::cout << scenario.title << ": cg_pr done" << std::endl;
-	}
-
-	{
-		auto cg_fr = fdapde::FletcherReevesCG<fdapde::Dynamic> {MAX_ITERATIONS, ERR_TOL, STEP_SIZE, true};
-		results.push_back(benchmark_one(
-			cg_fr, scenario, lambda_prop, "cg_fr",
-			fdapde::WolfeLineSearch()
-		));
-		std::cout << scenario.title << ": cg_fr done" << std::endl;
 	}
 
 	return results;
@@ -367,7 +362,7 @@ DETestScenario<Triangulation<1, 2>> load_test_1_5_d(const std::string &dir_name)
 void de_full_benchmark(bool output_csv)
 {
 	// Output markdown file
-	std::fstream output_file {path(ROOT_DIR) / path("outputs/benchmark.md"), std::ios::out | std::ios::trunc};
+	std::fstream output_file {path(ROOT_DIR) / path("outputs/cpp_de_bmrk.md"), std::ios::out | std::ios::trunc};
 	if(!output_file) {
 		std::cerr << "Canont open \"outputs/benchmark.md\"" << std::endl;
 		return;
@@ -375,27 +370,28 @@ void de_full_benchmark(bool output_csv)
 
 	// Creating one thread per benchmark
 	std::vector<std::thread> workers;
+	auto lambda_proposal = gen_lambda_prop(-2.0, 2.0, 1.0);
 
-	// workers.emplace_back( [&](){
-	// 	auto gaussian_square = load_test_2d("gaussian_square");
-	// 	auto gaussian_square_res = benchmark_all_opt(gaussian_square, gen_lambda_prop(-1.0, 3.0, 1.0));
-	// 	print_benchmark_md(gaussian_square_res, output_file);
-	// 	if(output_csv) save_log_densities(gaussian_square_res);
-	// });
+	workers.emplace_back( [&](){
+		auto gaussian_square = load_test_2d("gaussian_square");
+		auto gaussian_square_res = benchmark_all_opt(gaussian_square, lambda_proposal);
+		print_benchmark_md(gaussian_square_res, output_file);
+		if(output_csv) save_log_densities(gaussian_square_res);
+	});
 
 	workers.emplace_back([&](){	
 		auto infections_southampton = load_test_2d("infections_southampton");
-		auto infections_southampton_res = benchmark_all_opt(infections_southampton, gen_lambda_prop(-2.0, 2.0, 1.0));
+		auto infections_southampton_res = benchmark_all_opt(infections_southampton, lambda_proposal);
 		print_benchmark_md(infections_southampton_res, output_file);
 		if(output_csv) save_log_densities(infections_southampton_res);
 	});
 
-	// workers.emplace_back([&](){
-	// 	auto horseshoe = load_test_2d("horseshoe");
-	// 	auto horseshoe_res = benchmark_all_opt(horseshoe, gen_lambda_prop(-1.0, 3.0, 1.0));
-	// 	print_benchmark_md(horseshoe_res, output_file);
-	// 	if(output_csv) save_log_densities(horseshoe_res);
-	// });
+	workers.emplace_back([&](){
+		auto horseshoe = load_test_2d("horseshoe");
+		auto horseshoe_res = benchmark_all_opt(horseshoe, lambda_proposal);
+		print_benchmark_md(horseshoe_res, output_file);
+		if(output_csv) save_log_densities(horseshoe_res);
+	});
 
 	// workers.emplace_back([&](){
 	// 	auto kent_sphere = load_test_2_5d("kent_sphere");

@@ -53,7 +53,7 @@ write.csv(de$f_init[,best_lambda_id], file.path(directory, "f_init.csv"))
 # Load the data
 f_init <- read.csv(file.path(directory, "f_init.csv"))
 sample <- read.csv(file.path(directory, "sample.csv"))
-log_dens <- read.csv("./outputs/cpp_lbfgs30_infections_southampton_log_density.csv")
+log_dens <- read.csv("./outputs/cpp_LBFGS10_infections_southampton_log_density.csv")
 
 # Plot
 FEMfunction <- FEM(coeff = log_dens, FEMbasis = FEMbasis)

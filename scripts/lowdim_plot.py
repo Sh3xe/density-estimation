@@ -106,7 +106,7 @@ def box_plot_lowdim(py_name, cpp_name, fig_title):
 	test_cases = ["sphere", "rastrigin", "schwefel"]
 	dimensions = [2, 10, 30]
 	other_test_cases = ["rosenbrock", "schaffer_f6"]
-	use_logs = [True, False, False]
+	use_logs = [True, True, True]
 
 	for (test_case, use_log) in zip(test_cases, use_logs):
 		data = []; tick_labels= []
@@ -209,18 +209,16 @@ def output_diff_table_line(function_name, py_outs, cpp_outs):
 
 	s = ""
 
-	s += "{} (fdaPDE)|{:.1f} \\textpm {:.1f} |{:.2e} \\textpm {:.2e}|{:.2e}\\textpm {:.2e}|{}\\textpm {}\n".format(
+	s += "{} |fdaPDE|{:.1f} \\textpm {:.1f} |{:.2e}\\textpm {:.2e}|{}\\textpm {}\n".format(
 		function_name.replace("_", "\\_"),
 		cpp_df["nit"].mean(), cpp_df["nit"].std(),
-		cpp_df["x_diff"].mean(), cpp_df["x_diff"].std(),
 		cpp_df["f_diff"].mean(), cpp_df["f_diff"].std(),
 		duration_to_str(cpp_df["duration_microsec"].mean()), duration_to_str(cpp_df["duration_microsec"].std()),
 		)
 	
-	s += "{} (scipy)|{:.1f} \\textpm {:.1f} |{:.2e} \\textpm {:.2e}|{:.2e}\\textpm {:.2e}|{}\\textpm {}\n".format(
+	s += "{} | scipy|{:.1f} \\textpm {:.1f} |{:.2e}\\textpm {:.2e}|{}\\textpm {}\n".format(
 		function_name.replace("_", "\\_"),
 		py_df["nit"].mean(), py_df["nit"].std(),
-		py_df["x_diff"].mean(), py_df["x_diff"].std(),
 		py_df["f_diff"].mean(), py_df["f_diff"].std(),
 		duration_to_str(py_df["duration_microsec"].mean()), duration_to_str(py_df["duration_microsec"].std()),
 		)
@@ -232,7 +230,7 @@ def output_diff_table(py_name, cpp_name):
 	py_outs = list(filter(lambda x: "py" in x and py_name + "_" in x, outputs))
 	cpp_outs = list(filter(lambda x: "cpp" in x and cpp_name + "_" in x, outputs))
 
-	s = "Method|Iters|x\\_diff|f\\_diff|duration\n"
+	s = "Method|Type|Iters|f\\_diff|duration\n"
 	s += "-|-|-|-|-\n"
 
 	s += output_diff_table_line("sphere_2d", py_outs, cpp_outs)
@@ -334,16 +332,14 @@ if __name__ == "__main__":
 	# box_plot_comp_all_cpp("schaffer_f6", methods, "Schaffer F6", True)
 	# box_plot_comp_all_cpp("schwefel_10d", methods, "Schewefel 10D")
 
-	# box_plot_lowdim("L-BFGS-B", "lbfgs30", "L-BFGS-30")
-	# box_plot_lowdim("Nelder-Mead", "nelder_mead", "Nelder-Mead")
-	# box_plot_lowdim("CG", "cg_pr_restart", "CG_PR")
-	# box_plot_lowdim("CG", "cg_prp_restart", "CG_PRP")
+	box_plot_lowdim("L-BFGS-B", "lbfgs30", "L-BFGS-30")
+	box_plot_lowdim("Nelder-Mead", "nelder_mead", "Nelder-Mead")
+	box_plot_lowdim("CG", "cg_pr_restart", "CG_PR")
+	box_plot_lowdim("CG", "cg_prp_restart", "CG_PRP")
 
 	# s  = "### {}\n{}\n".format("LBFGS30", output_diff_table("L-BFGS-B", "lbfgs30") )
 	# s += "### {}\n{}\n".format("Nelder-Mead", output_diff_table("Nelder-Mead", "nelder_mead") )
-	# s += "### {}\n{}\n".format("CGFR", output_diff_table("CG", "cg_fr") )
-	# s += "### {}\n{}\n".format("CGPR", output_diff_table("CG", "cg_pr") )
-	# s += "### {}\n{}\n".format("CGPRP", output_diff_table("CG", "cg_prp") )
+	# s += "### {}\n{}\n".format("CGPRP", output_diff_table("CG", "cg_pr_restart") )
 	# open("figures/nm_tbl.md", "w").write(s)
 
 	# s = output_table("genetic_bin_co") + "\n"
