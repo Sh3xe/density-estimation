@@ -54,10 +54,10 @@ test_scenario <- function(scenario, lambda_proposal, direction_method) {
 		data = scenario$sample,
 		FEMbasis = FEMbasis,
 		lambda <- lambda_proposal,
-		# nfolds = CV_K,
+		nfolds = CV_K,
 		tol1 = TOL,
 		nsimulations = MAX_ITER,
-		# preprocess_method = "RightCV",
+		preprocess_method = "RightCV",
 		stepProposals = STEP,
 		step_method = "Wolfe_Method",
 		direction_method = direction_method
@@ -88,18 +88,49 @@ benchmark_scenario <- function(scenario, lambdas) {
 	return( df )
 }
 
+integral <- function(func_vect, fem_basis) {
+  mesh <- fem_basis$mesh
+  nodes <- mesh$nodes
+  elements <- mesh$triangles
+
+  total_integral <- 0
+
+  for (i in 1:nrow(elements)) {
+    element_nodes <- nodes[elements[i, ], ]
+    element_func_vect <- func_vect[elements[i, ]]
+
+    # Using the shoelace formula for the area of a triangle
+    x <- element_nodes[, 1]
+    y <- element_nodes[, 2]
+    area <- 0.5 * abs(x[1]*(y[2] - y[3]) + x[2]*(y[3] - y[1]) + x[3]*(y[1] - y[2]))
+
+    mean_value <- mean(element_func_vect)
+    total_integral <- total_integral + mean_value * area
+  }
+
+  return(total_integral)
+}
+
 cv_error <- function(log_density, scenario, cv_k) {
 	FEMbasis <- create.FEM.basis(mesh = scenario$mesh)
-
+	fem_log_dens <- FEM(coeff = log_density, FEMbasis = FEMbasis)
 	err <- 0.0
 	for (k in 1:cv_k) {
 		res <- split_dataset(scenario$sample, cv_k, k)
-		fem_log_dens <- FEM(coeff = log_density, FEMbasis = FEMbasis)
-		log_dens_eval <- eval.FEM(FEM = fem_log_dens, res$testing)
-		err <- err - (sum(log_dens_eval) / length(log_dens_eval))
+		log_dens_eval <- eval.FEM(fem_log_dens, res$testing)
+		err <- err + ( integral(exp(2.0*log_density), FEMbasis) - 2 * mean(exp(log_dens_eval)))
 	}
 
 	return (err / cv_k)
+}
+
+
+cv_error_part <- function(log_density, scenario, cv_i, cv_k) {
+	FEMbasis <- create.FEM.basis(mesh = scenario$mesh)
+	fem_log_dens <- FEM(coeff = log_density, FEMbasis = FEMbasis)
+	res <- split_dataset(scenario$sample, cv_k, cv_i)
+	log_dens_eval <- eval.FEM(fem_log_dens, res$testing)
+	return ( integral(exp(2.0*log_density), FEMbasis) - 2 * mean(exp(log_dens_eval)))
 }
 
 compute_cv_errors <- function(language_str, opt_method, scenario, lambda) {
@@ -124,7 +155,7 @@ compute_cv_errors <- function(language_str, opt_method, scenario, lambda) {
 			} else {
 				log_dens_vec <- log_dens$V0
 			}
-			cv_err <- cv_error(log_dens_vec, scenario, 5)
+			cv_err <- cv_error_part(log_dens_vec, scenario, i, 5)
 			err_tot <- cv_err
 			n_errs <- n_errs + 1
 		}
@@ -222,7 +253,6 @@ compute_best_lambdas <- function(csv_table_path, cpp_opt_names, scenarios) {
   }
 }
 
-
 gaussian_square <- load_scenario_2d("gaussian_square", "gaussian_square")
 horseshoe <- load_scenario_2d("horseshoe", "horseshoe")
 infections_southampton <- load_scenario_2d("infections_southampton", "infections_southampton")
@@ -232,9 +262,8 @@ cpp_opt_names <- c("BFGS", "LBFGS10", "cg_pr")
 scenarios <- list(gaussian_square, horseshoe, infections_southampton)
 cv_k <- 5
 
-compute_best_lambdas("cross_validation_errors.csv", cpp_opt_names, scenarios)
-
 # compute_all_cv_errors(cpp_opt_names, r_opt_names, scenarios, lambda_proposal)
+# compute_best_lambdas("cross_validation_errors.csv", cpp_opt_names, scenarios)
 
 # for(opt_name in r_opt_names) {
 	# output_scenario_cv_densities(gaussian_square, lambda_proposal, opt_name, cv_k)
@@ -248,12 +277,12 @@ compute_best_lambdas("cross_validation_errors.csv", cpp_opt_names, scenarios)
 # compute_cv_errors("cpp", "cg_pr", load_scenario_2d("infections_southampton", "infections_southampton"))
 
 # Benchmark DE
-# gs <- benchmark_scenario(load_scenario_2d("gaussian_square", "gaussian_square"), c(0.1))
-# write.csv(gs, "outputs/r_bmrk_gaussian_square.csv")
+gs <- benchmark_scenario(load_scenario_2d("gaussian_square", "gaussian_square"), lambda_proposal)
+write.csv(gs, "outputs/r_bmrk_gaussian_square.csv")
 
-# is <- benchmark_scenario(load_scenario_2d("infections_southampton", "infections_southampton"), c(0.1))
-# write.csv(is, "outputs/r_bmrk_infection_southampton.csv")
+is <- benchmark_scenario(load_scenario_2d("infections_southampton", "infections_southampton"), lambda_proposal)
+write.csv(is, "outputs/r_bmrk_infection_southampton.csv")
 
-# hs <- benchmark_scenario(load_scenario_2d("horseshoe", "horseshoe"), c(0.1))
-# write.csv(hs, "outputs/r_bmrk_horseshoe.csv")
+hs <- benchmark_scenario(load_scenario_2d("horseshoe", "horseshoe"), lambda_proposal)
+write.csv(hs, "outputs/r_bmrk_horseshoe.csv")
 

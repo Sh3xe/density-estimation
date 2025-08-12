@@ -14,6 +14,7 @@
 #include <mutex>
 
 using namespace fdapde;
+namespace fs = std::filesystem;
 using namespace Eigen;
 
 constexpr double LINK_TOL = 1e-5;
@@ -133,16 +134,18 @@ double cv_error(
 		model.fit(lambda, scenario.g_init, optimizer, std::forward<Hooks>(hooks)...);
 
 		// Compute the error on the test set
-		// fdapde::FeSpace Vh(scenario.discretization, fdapde::P1<1>);
-		// fdapde::FeFunction log_dens_func(Vh, model.log_density());
-		write_csv("cv_csv/cpp#" + std::to_string(i) + "#" + opt_name + "#" + std::to_string(lambda) + "#" + scenario.title + ".csv", model.log_density());
-		
+		fdapde::FeSpace Vh(scenario.discretization, fdapde::P1<1>);
+		fdapde::FeFunction log_dens_func(Vh, model.log_density());
 
-		// double err = 0.0;
-		// for(int i = 0; i < test_set.rows(); ++i) {
-		// 	err -= log_dens_func(test_set.row(i));
-		// }
-		// err_tot += err / static_cast<double>(test_set.rows());
+		write_csv("cv_csv/cpp#" + std::to_string(i) + "#" + opt_name + "#" + std::to_string(lambda) + "#" + scenario.title + ".csv", model.log_density());
+
+		double total_dens_eval = 0.0;
+		for(int i = 0; i < test_set.rows(); ++i) {
+			total_dens_eval += std::exp( log_dens_func(test_set.row(i)) );
+		}
+
+		err_tot += fdapde::integral(scenario.discretization, fdapde::QS2DP4)(exp(2.0*log_dens_func));
+		err_tot	-= 2.0 * (total_dens_eval / (double)test_set.rows());
 	}
 
 	return err_tot / static_cast<double>(CV_K);
@@ -359,12 +362,68 @@ DETestScenario<Triangulation<1, 2>> load_test_1_5_d(const std::string &dir_name)
 	return DETestScenario<Triangulation<1, 2>>(dir_name, std::move(dataset), std::move(g_init), std::move(space_discr) );
 }
 
+
+template <
+	typename SpaceTriangulation
+>
+double l2_error(
+	DETestScenario<SpaceTriangulation> &scenario,
+	const Eigen::VectorXd &true_density_vec, 
+	const Eigen::VectorXd &estimated_density_vec
+) {
+
+	fdapde::FeSpace Vh(scenario.discretization, fdapde::P1<1>);
+	fdapde::FeFunction diff_func(Vh, (true_density_vec - estimated_density_vec));
+
+	return fdapde::integral(scenario.discretization, fdapde::QS2DP4)( diff_func * diff_func );
+}
+
+void print_l2_errors(const std::string &test_path) {
+	// fetch real density in the data directory
+	auto dir = path(ROOT_DIR) / path("data") / path(test_path);
+	auto scenario = load_test_2d(test_path);
+
+	auto true_density_vec = read_csv<double>(dir / path("true_density.csv"))
+		.as_matrix()
+		.array();
+		std::cout << true_density_vec.rows() << " " << true_density_vec.cols() << std::endl;
+
+	for( auto &file: fs::directory_iterator(path(ROOT_DIR) / path("outputs")) ){
+		// Filter csv files
+		auto filename = file.path().filename().string();
+		std::cout << "1" << filename << std::endl;
+		if( file.path().extension() != ".csv") continue;	
+
+		std::cout << "2" << std::endl;
+
+		// Filter for the right test case
+		if( filename.find(test_path) == std::string::npos ) continue;
+	
+		std::cout << "3 " << filename << std::endl;
+		std::cout << "3 " << file.path().string() << std::endl;
+
+		// Compute L2 error
+		auto estimated_density_vec = read_csv<double>(file.path().string())
+			.as_matrix()
+			.array()
+			.exp();
+
+		std::cout << "4" << std::endl;
+		
+		std::cout << estimated_density_vec.rows() << " " << estimated_density_vec.cols() << std::endl;
+
+		double err = l2_error(scenario, true_density_vec, estimated_density_vec);
+		std::cout << filename << ": " << err << std::endl;
+	}
+}
+
+
 void de_full_benchmark(bool output_csv)
 {
 	// Output markdown file
 	std::fstream output_file {path(ROOT_DIR) / path("outputs/cpp_de_bmrk.md"), std::ios::out | std::ios::trunc};
 	if(!output_file) {
-		std::cerr << "Canont open \"outputs/benchmark.md\"" << std::endl;
+		std::cerr << "Cannot open \"outputs/benchmark.md\"" << std::endl;
 		return;
 	}
 

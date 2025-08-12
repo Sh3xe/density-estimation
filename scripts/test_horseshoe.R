@@ -40,7 +40,7 @@ write.csv(mesh$nodesmarker, file.path(output_dir, "mesh_boundary.csv"))
 write.csv(data, file.path(output_dir, "sample.csv"))
 
 # Calculate f_init
-lambda_proposal <- 10^seq(from = 2, to = -3, by = -1)
+lambda_proposal <- 10^seq(from = 2, to = -2, by = -1)
 
 de <- DE.FEM(
 	data = data,
@@ -75,8 +75,8 @@ mesh.eval <- create.mesh.2D(nodes = grid)
 # Set up the finite element basis
 FEMbasis.eval <- create.FEM.basis(mesh = mesh.eval)
 
-estimated_log_dens <- read.csv("cv_csv/cpp#0#BFGS#0.010000#horseshoe.csv")
-FEMfunction <- FEM(coeff = de$g, FEMbasis = FEMbasis)
+estimated_log_dens <- read.csv("outputs/r_L-BFGS10_gaussian_square_log_density.csv")
+FEMfunction <- FEM(coeff = estimated_log_dens$x, FEMbasis = FEMbasis)
 evaluation <- eval.FEM(FEM = FEMfunction, locations = mesh.eval$nodes)
 
 # Compute the density estimate on the nodes of the finer mesh
@@ -94,5 +94,6 @@ plot.density.2D(X = X, Y = Y, Z = true_density, boundary = boundary.domain.2(), 
 
 # function in helper_functions_plot.R
 plot.density.2D(X = X, Y = Y, Z = estimated_density, boundary = boundary.domain.2(), colorscale="viridis")
+
 
 
