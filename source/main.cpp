@@ -6,7 +6,7 @@
 #include <iostream>
 
 int main(int argc, char **argv) {
-	std::string type = "";
+	std::string type = "compde";
 	if(argc > 1) {
 		type = argv[1];
 	}
@@ -20,7 +20,12 @@ int main(int argc, char **argv) {
 		std::cout << "Starting low dim benchmarks, \"output_csv\" = " << (output_csv ? "Yes": "No") << std::endl;
 		lowdim_full_benchmark(output_csv);
 	} else if( type == "compde") {
-		print_l2_errors("gaussian_square");
+		if(argc > 2) {
+			std::cout << "Using test case \"" << argv[2] << "\" for real-density computation" << std::endl;; 
+			print_l2_errors(argv[2]);
+		} else {
+			std::cout << "Need an additional argument, ex: \"gaussian_square\"" << std::endl;
+		}
 	} else {
 		std::cout << "No type specified, type must be \"lowdim\" or \"de\": [name] [type] output_csv?" << std::endl;
 	}

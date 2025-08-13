@@ -383,34 +383,27 @@ void print_l2_errors(const std::string &test_path) {
 	auto dir = path(ROOT_DIR) / path("data") / path(test_path);
 	auto scenario = load_test_2d(test_path);
 
-	auto true_density_vec = read_csv<double>(dir / path("true_density.csv"))
+	Eigen::VectorXd true_density_vec = read_csv<double>(dir / path("true_density.csv"))
 		.as_matrix()
 		.array();
 		std::cout << true_density_vec.rows() << " " << true_density_vec.cols() << std::endl;
 
 	for( auto &file: fs::directory_iterator(path(ROOT_DIR) / path("outputs")) ){
-		// Filter csv files
 		auto filename = file.path().filename().string();
-		std::cout << "1" << filename << std::endl;
+		// Filter csv files
 		if( file.path().extension() != ".csv") continue;	
 
-		std::cout << "2" << std::endl;
+		// Filter for log-densities
+		if( filename.find("log_density") == std::string::npos ) continue;	
 
 		// Filter for the right test case
 		if( filename.find(test_path) == std::string::npos ) continue;
-	
-		std::cout << "3 " << filename << std::endl;
-		std::cout << "3 " << file.path().string() << std::endl;
 
 		// Compute L2 error
-		auto estimated_density_vec = read_csv<double>(file.path().string())
+		Eigen::VectorXd estimated_density_vec = read_csv<double>(file.path().string())
 			.as_matrix()
 			.array()
 			.exp();
-
-		std::cout << "4" << std::endl;
-		
-		std::cout << estimated_density_vec.rows() << " " << estimated_density_vec.cols() << std::endl;
 
 		double err = l2_error(scenario, true_density_vec, estimated_density_vec);
 		std::cout << filename << ": " << err << std::endl;
