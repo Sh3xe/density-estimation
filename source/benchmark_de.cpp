@@ -59,30 +59,6 @@ struct DETestScenario {
 	}
 };
 
-
-/**
- * @brief Generate a pair of (train_set, test_set) of size (SIZE*(k-1/k), SIZE/k)
- * 
- * @param dataset original training set
- * @param k number of subdivisions of the training set
- * @param i which slice of the k will be used as test_set
- * @return std::pair< Eigen::MatrixXd, Eigen::MatrixXd > a pair (training, testing)
- */
-std::pair< MatrixXd, MatrixXd > split_dataset( const MatrixXd &dataset, size_t k, size_t i) {
-	size_t slice_size = dataset.rows() / k;
-	size_t slice_index_begin = std::min(i*slice_size, dataset.rows() - slice_size);
-
-	MatrixXd testing = dataset.block(slice_index_begin, 0, slice_size, dataset.cols());
-
-	MatrixXd training_2 = dataset.block(slice_index_begin + slice_size, 0, dataset.rows() - slice_index_begin - slice_size, dataset.cols());
-	MatrixXd training_1 = dataset.block(0, 0, slice_index_begin, dataset.cols());
-
-	MatrixXd training(training_1.rows()+training_2.rows(), training_1.cols());
-	training << training_1, training_2;
-
-	return std::make_pair(training, testing);
-}
-
 /**
  * @brief Generate a sequence of 10^x_i with x_i in [from, to]
  * 
@@ -122,7 +98,7 @@ double cv_error(
 
 	for(int i = 0; i < CV_K; ++i) {
 		// Split the dataset & setup solver
-		const auto [train_set, test_set] = split_dataset(scenario.dataset, CV_K, i);
+		const auto [train_set, test_set] = utils::split_dataset(scenario.dataset, CV_K, i);
 		fdapde::GeoFrame geo_data(scenario.discretization);
 
 		auto& sample = geo_data.template insert_scalar_layer<fdapde::POINT>("sample", train_set);
@@ -410,7 +386,6 @@ void print_l2_errors(const std::string &test_path) {
 	}
 }
 
-
 void de_full_benchmark(bool output_csv)
 {
 	// Output markdown file
@@ -447,10 +422,9 @@ void de_full_benchmark(bool output_csv)
 
 	// workers.emplace_back([&](){
 	// 	auto kent_sphere = load_test_2_5d("kent_sphere");
-	// 	auto kent_sphere_res = benchmark_all_opt(kent_sphere, gen_lambda_prop(-5.0, -1.0, 1.0));
+	// 	auto kent_sphere_res = benchmark_all_opt(kent_sphere, lambda_proposal);
 	// 	print_benchmark_md(kent_sphere_res, output_file);
-	// 	if(output_csv)
-	// 	save_log_densities(kent_sphere_res);
+	// 	if(output_csv) save_log_densities(kent_sphere_res);
 	// });
 
 	// workers.emplace_back([&](){
@@ -474,13 +448,6 @@ void de_full_benchmark(bool output_csv)
 		// print_benchmark_md(accidents_bergamo_res, output_file);
 		// if(output_csv)
 		// 	save_log_densities(accidents_bergamo_res)
-	// });
-
-	// workers.emplace_back([&](){
-	// 	auto snp500 = load_test_snp500("snp500");
-	// 	auto snp500_res = benchmark_all_opt(snp500, gen_lambda_prop(-2.0, 2.0, 1.0));
-	// 	print_benchmark_md(snp500_res, output_file);
-	// 	if(output_csv) save_log_densities(snp500_res);
 	// });
 
 	for(auto &t: workers) {

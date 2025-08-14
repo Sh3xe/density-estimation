@@ -7,6 +7,7 @@ add_executable( advanced_optim_applic
 	source/benchmark_de.cpp
 	source/benchmark_low_dim.cpp
 	source/utilities.cpp
+	source/space_time_params.cpp
 )
 
 configure_file(

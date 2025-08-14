@@ -30,4 +30,14 @@ std::string file_name(
 	const std::string &optimizer
 );
 
+/**
+ * @brief Generate a pair of (train_set, test_set) of size (SIZE*(k-1/k), SIZE/k)
+ * 
+ * @param dataset original training set
+ * @param k number of subdivisions of the training set
+ * @param i which slice of the k will be used as test_set
+ * @return std::pair< Eigen::MatrixXd, Eigen::MatrixXd > a pair (training, testing)
+ */
+std::pair< Eigen::MatrixXd, Eigen::MatrixXd > split_dataset( const Eigen::MatrixXd &dataset, size_t k, size_t i);
+
 } // namespace utils

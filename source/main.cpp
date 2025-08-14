@@ -1,5 +1,6 @@
 #include "benchmark_de.hpp"
 #include "benchmark_low_dim.hpp"
+#include "space_time_params.hpp"
 
 #include <cstring>
 #include <string>
@@ -26,6 +27,8 @@ int main(int argc, char **argv) {
 		} else {
 			std::cout << "Need an additional argument, ex: \"gaussian_square\"" << std::endl;
 		}
+	} else if( type == "space_time") {
+		test();
 	} else {
 		std::cout << "No type specified, type must be \"lowdim\" or \"de\": [name] [type] output_csv?" << std::endl;
 	}

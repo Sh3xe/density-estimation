@@ -86,3 +86,18 @@ double utils::std(const Eigen::MatrixXd &df, size_t col_idx) {
 
 	return std::sqrt( tot / (double)(df.rows()-1) );
 }
+
+std::pair< Eigen::MatrixXd, Eigen::MatrixXd > utils::split_dataset( const Eigen::MatrixXd &dataset, size_t k, size_t i) {
+	size_t slice_size = dataset.rows() / k;
+	size_t slice_index_begin = std::min(i*slice_size, dataset.rows() - slice_size);
+
+	Eigen::MatrixXd testing = dataset.block(slice_index_begin, 0, slice_size, dataset.cols());
+
+	Eigen::MatrixXd training_2 = dataset.block(slice_index_begin + slice_size, 0, dataset.rows() - slice_index_begin - slice_size, dataset.cols());
+	Eigen::MatrixXd training_1 = dataset.block(0, 0, slice_index_begin, dataset.cols());
+
+	Eigen::MatrixXd training(training_1.rows()+training_2.rows(), training_1.cols());
+	training << training_1, training_2;
+
+	return std::make_pair(training, testing);
+}
