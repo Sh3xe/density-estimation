@@ -26,8 +26,8 @@ std::string utils::duration_to_str(const microsec &duration) {
 	}
 }
 
-Eigen::MatrixXd utils::load_csv(const std::string &filepath) {
-	rapidcsv::Document doc((path(ROOT_DIR) / path(filepath)).string(), rapidcsv::LabelParams(-1, -1));
+Eigen::MatrixXd utils::load_csv(const std::string &filepath, const int column_name_id, const int row_name_id) {
+	rapidcsv::Document doc(filepath, rapidcsv::LabelParams(column_name_id, row_name_id));
 	Eigen::MatrixXd csv_mat = Eigen::MatrixXd::Zero(doc.GetRowCount(), doc.GetColumnCount());
 
 	for(int i = 0; i < csv_mat.rows(); ++i) {

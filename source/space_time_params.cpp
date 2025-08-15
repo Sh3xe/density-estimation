@@ -1,143 +1,194 @@
 #include "space_time_params.hpp"
 #include "utilities.hpp"
-#include <fdaPDE/fdapde.h>
+#include <vector>
+#include <fdaPDE/optimization.h>
 
 using namespace fdapde;
-namespace fs = std::filesystem;
-using namespace Eigen;
 
-constexpr double LINK_TOL = 1e-3;
-constexpr int MAX_ITER = 100;
-constexpr int CV_K = 5;
-constexpr double STEP_SIZE = 1e-2;
-constexpr double ERR_TOL = LINK_TOL;
+double bilinear_interpolation(
+	const Eigen::MatrixXd& grid,
+	const Eigen::VectorXd& x_grid,
+	const Eigen::VectorXd& y_grid,
+	double x, double y) {
 
-struct TestScenario {
-	Triangulation<2, 2> space_domain;
-	Triangulation<1, 1> time_domain;
-	MatrixXd g_init;
-	MatrixXd dataset;
-};
+	// Find the indices of the four neighboring points
+	int x1_idx = 0, x2_idx = 0;
+	int y1_idx = 0, y2_idx = 0;
 
-struct EvaluationCounter {
-	int func_eval_count = 0;
-	int grad_eval_count = 0;
+	// Find x indices
+	for (int i = 0; i < x_grid.size() - 1; ++i) {
+		if (x_grid(i) <= x && x_grid(i+1) > x) {
+			x1_idx = i;
+			x2_idx = i + 1;
+		}
+	}
+
+	// Find y indices
+	for (int i = 0; i < y_grid.size() - 1; ++i) {
+		if (y_grid(i) <= y && y_grid(i+1) > y) {
+			y1_idx = i;
+			y2_idx = i + 1;
+		}
+	}
+
+	// Get the four nearest values
+	double Q11 = grid(x1_idx, y1_idx);
+	double Q12 = grid(x1_idx, y2_idx);
+	double Q21 = grid(x2_idx, y1_idx);
+	double Q22 = grid(x2_idx, y2_idx);
+
+	// Calculate interpolation weights
+	double x_frac = (x - x_grid(x1_idx)) / (x_grid(x2_idx) - x_grid(x1_idx));
+	double y_frac = (y - y_grid(y1_idx)) / (y_grid(y2_idx) - y_grid(y1_idx));
+
+	// Perform bilinear interpolation
+	double interpolated_value = 
+		(1 - x_frac) * (1 - y_frac) * Q11 +
+		(1 - x_frac) * y_frac * Q12 +
+		x_frac * (1 - y_frac) * Q21 +
+		x_frac * y_frac * Q22;
+
+	return interpolated_value;
+}
+
+struct ParamFunction {
+	int max_evals = 100;
+	bool log = false;
+	Eigen::VectorXd space_values;
+	Eigen::VectorXd time_values;
+	Eigen::VectorXd cv_values;
+	Eigen::MatrixXd cv_matrix;
+	double x_min = 0.0, x_max = 1.0;
+	double y_min = 0.0, y_max = 1.0;
+	
+	int eval_counter = 0;
+	double best_value = std::numeric_limits<double>::max();
+	std::vector<double> values;
+	std::vector<Eigen::VectorXd> eval_points;
+
+	ParamFunction(bool log = true): log(log) {
+		auto dir = path(ROOT_DIR);
+		space_values = utils::load_csv(dir / path("outputs/st_hm_space.csv"), 0, 0);
+		time_values = utils::load_csv(dir / path("outputs/st_hm_time.csv"), 0, 0);
+		cv_values = utils::load_csv(dir / path("outputs/st_hm_cverr.csv"), 0, 0);
+
+		cv_matrix.resize(space_values.size(), time_values.size());
+		for (int i = 0; i < space_values.size(); ++i) {
+			for (int j = 0; j < time_values.size(); ++j) {
+				cv_matrix(i, j) = cv_values[i * time_values.size() + j];
+			}
+		}
+
+		x_min = space_values.minCoeff(); x_max = space_values.maxCoeff();
+		y_min = time_values.minCoeff(); y_max = time_values.maxCoeff();
+	}
+
+	double operator()(const Eigen::VectorXd &input) {
+
+		double x = std::pow(10, input(0));
+		double y = std::pow(10, input(1));
+		
+		double x_diff = 0.0;
+		double y_diff = 0.0;
+
+		if(x < x_min || x > x_max) {
+			x_diff = std::min(std::abs(x-x_min), std::abs(x-x_max));
+			x = std::max(std::min(x_max - 0.1, x), x_min + 0.1);
+		}
+		if(y < y_min || y > y_max) {
+			y_diff = std::min(std::abs(y-y_min), std::abs(y-y_max));
+			y = std::max(std::min(y_max - 0.1, y), y_min + 0.1);
+		}
+
+		double current_eval = bilinear_interpolation(cv_matrix, space_values, time_values, x, y);
+		current_eval += x_diff * x_diff * 10;
+		current_eval += y_diff * y_diff * 10;
+
+		if(log) {
+			std::cout << "Func(" << input(0) << "," << input(1) << ") = " << current_eval << std::endl;
+		}
+
+		eval_counter++;
+		values.push_back(current_eval);
+		eval_points.push_back(input);
+
+		if(best_value > current_eval) {
+			best_value = current_eval;
+		}
+
+		return current_eval;
+	}
+
+	void save_data(const std::string &file_name) {
+		Eigen::MatrixXd df = Eigen::MatrixXd::Zero(values.size(), 3);
+		for(int i = 0; i < values.size(); ++i) {
+			df(i, 0) = values[i];
+			df(i, 1) = eval_points[i](0);
+			df(i, 2) = eval_points[i](1);
+		}
+		utils::write_csv(file_name, {"value", "x", "y"}, df);
+	}
+
+	template <typename Opt>
+	bool stop_if(Opt& optimizer) {
+		if(log) {
+			std::cout << "stop_if call " << std::endl;
+		}
+		return eval_counter >= max_evals;
+	}
 
 	void reset() {
-		func_eval_count = 0;
-		grad_eval_count = 0;
-	}
-
-	template <typename Opt, typename Obj> bool grad_hook(Opt& opt, Obj& obj) {
-		++grad_eval_count;
-		return false;
-	}
-
-	template <typename Opt, typename Obj> bool eval_hook(Opt& opt, Obj& obj) {
-		++func_eval_count;
-		return false;
+		eval_counter = 0;
+		values.clear();
+		eval_points.clear();
+		best_value = std::numeric_limits<double>::max();
 	}
 };
 
-TestScenario load_test() {
-	// Load the test scenario
-	auto dir = path(ROOT_DIR) / path("data/unit_square_space_time");
-	Triangulation<2, 2> space_domain(
-		(dir / path("mesh_vertices.csv")).string(),
-		(dir / path("mesh_elements.csv")).string(),
-		(dir / path("mesh_boundary.csv")).string(),
-		true, true
-	);
+void test() {
+	ParamFunction func {false};
+	Eigen::VectorXd x0(2);
+	x0(0) = log10(func.space_values(func.space_values.size() / 2));
+	x0(1) = log10(func.time_values(func.time_values.size() / 2));
+	std::cout << "x0 = " << x0(0) << ", " << x0(1) << std::endl;
 
-	Triangulation<1, 1> time_domain = Triangulation<1, 1>::UnitInterval(7);
-
-	MatrixXd g_init = read_csv<double>((dir / path("f_init.csv")).string())
-		.as_matrix()
-		.array()
-		.log();
-
-	MatrixXd dataset(500, 3);
-	dataset.leftCols(2)  = read_csv<double>((dir / path("sample_space.csv")).string()).as_matrix();
-	dataset.rightCols(1) = read_csv<double>((dir / path("sample_time.csv")).string()).as_matrix();
-
-	TestScenario scenario;
-	scenario.space_domain = space_domain;
-	scenario.time_domain = time_domain;
-	scenario.g_init = g_init;
-	scenario.dataset = dataset;
-
-	std::cout << space_domain.nodes().rows() << " " << space_domain.nodes().cols() << std::endl;
-	std::cout << time_domain.nodes().rows() << " " << time_domain.nodes().cols() << std::endl;
-
-	return scenario;
-}
-
-template < typename DEPDESolver >
-double cv_error(
-	const double lambda_space,
-	const double lambda_time,
-	DEPDESolver &solver, // fe_de_separable
-	TestScenario &scenario,
-	int cv_k
-) {
-	double err_tot = 0.0;
-	
-	for(int i = 0; i < cv_k; ++i) {
-		// Split the dataset & setup solver
-		const auto [train_set, test_set] = utils::split_dataset(scenario.dataset, CV_K, i);
-		GeoFrame geo_data(scenario.space_domain, scenario.time_domain);
-
-		auto& data_layer = geo_data.template insert_scalar_layer<POINT, POINT>("l1", train_set);
-		DEPDE<typename DEPDESolver::solver_t> model(geo_data, solver);
-
-		model.set_llik_tolerance(LINK_TOL);
-
-		// Solve
-		model.fit(
-			lambda_space, lambda_time, scenario.g_init,
-			LBFGS<fdapde::Dynamic>(MAX_ITER, ERR_TOL, STEP_SIZE, 10), 
-			WolfeLineSearch()
-		);
-
-		// -------- SPACE-ONLY ERROR COMPUTATION --------
-		// Compute the error on the test set
-		// FeSpace Vh(scenario.discretization, P1<1>);
-		// FeFunction log_dens_func(Vh, model.log_density());
-
-		// double total_dens_eval = 0.0;
-		// for(int i = 0; i < test_set.rows(); ++i) {
-		// 	total_dens_eval += std::exp( log_dens_func(test_set.row(i)) );
-		// }
-
-		// err_tot += integral(scenario.discretization, QS2DP4)(exp(2.0*log_dens_func));
-		// err_tot	-= 2.0 * (total_dens_eval / (double)test_set.rows());
+	{
+		GeneticOptim<fdapde::Dynamic> go{100, 0.0, 100, 5};
+		func.reset();
+		go.optimize(func, x0, GaussianMutation(0.1, 0.95), BinaryTournamentSelection());
+		std::cout << "Min: " <<  go.value() << ", Func evals: " << func.eval_counter << std::endl;
+		func.save_data("outputs/cal_go_gm_bts.csv");
 	}
 
-	return err_tot / static_cast<double>(CV_K);
-}
+	{
+		GeneticOptim<fdapde::Dynamic> go{100, 0.0, 100, 5};
+		func.reset();
+		go.optimize(func, x0, GaussianMutation(0.1, 0.95), CrossoverMutation(), BinaryTournamentSelection());
+		std::cout << "Min: " <<  go.value() << ", Func evals: " << func.eval_counter << std::endl;
+		func.save_data("outputs/cal_go_gm_cm_bts.csv");
+	}
 
-double fit_space_time(TestScenario &scenario, const double lambda_space, const double lambda_time) {
-	// Defining the model
-	FeSpace Vh(scenario.space_domain, P1<1>);   // linear finite element in space
-	TrialFunction f(Vh);
-	TestFunction  v(Vh);
-	auto a_D = integral(scenario.space_domain)(dot(grad(f), grad(v)));
-	ZeroField<2> u_D;
-	auto F_D = integral(scenario.space_domain)(u_D * v);
+	{
+		GeneticOptim<fdapde::Dynamic> go{100, 0.0, 100, 5};
+		func.reset();
+		go.optimize(func, x0, GaussianMutation(0.1, 0.95), RankSelection());
+		std::cout << "Min: " <<  go.value() << ", Func evals: " << func.eval_counter << std::endl;
+		func.save_data("outputs/cal_go_gm_rs.csv");
+	}
 
-	BsSpace Qh(scenario.time_domain, 3);   // cubic B-spline in time
-	TrialFunction g(Qh);
-	TestFunction  w(Qh);
-	auto a_T = integral(scenario.time_domain)(dxx(g) * dxx(w));
-	ZeroField<1> u_T;
-	auto F_T = integral(scenario.time_domain)(u_T * w);
+	{
+		GeneticOptim<fdapde::Dynamic> go{100, 0.0, 100, 5};
+		func.reset();
+		go.optimize(func, x0, GaussianMutation(0.1, 0.95), CrossoverMutation(), RankSelection());
+		std::cout << "Min: " <<  go.value() << ", Func evals: " << func.eval_counter << std::endl;
+		func.save_data("outputs/cal_go_gm_cm_rs.csv");
+	}
 
-	// Model
-	auto solver = fe_de_separable(std::pair {a_D, F_D}, std::pair {a_T, F_T});
-	return cv_error(lambda_space, lambda_time, solver, scenario, CV_K);
-}
-
-void test() {
-	TestScenario scenario = load_test();
-	fit_space_time(scenario, 0.00025, 0.01);
+	{
+		NelderMead<fdapde::Dynamic> nm {100, 0.0};
+		func.reset();
+		nm.optimize(func, x0, GaussianMutation(0.1, 0.95), BinaryTournamentSelection());
+		std::cout << "Min: " <<  nm.value() << ", Func evals: " << func.eval_counter << std::endl;
+		func.save_data("outputs/cal_nm.csv");
+	}
 }

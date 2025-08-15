@@ -12,7 +12,7 @@ using microsec = std::chrono::duration<double, std::micro>;
 
 namespace utils {
 
-Eigen::MatrixXd load_csv(const std::string &filepath);
+Eigen::MatrixXd load_csv(const std::string &filepath, const int column_name_id = -1, const int row_name_id = - 1);
 void write_csv(const std::string &filepath, const std::vector<std::string> &columns, const Eigen::MatrixXd &matrix);
 std::string duration_to_str(const microsec &duration);
 double mean(const Eigen::MatrixXd &df, size_t col_idx);

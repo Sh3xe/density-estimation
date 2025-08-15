@@ -1,4 +1,4 @@
-#include "benchmark_de.hpp"
+// #include "benchmark_de.hpp"
 #include "benchmark_low_dim.hpp"
 #include "space_time_params.hpp"
 
@@ -7,7 +7,7 @@
 #include <iostream>
 
 int main(int argc, char **argv) {
-	std::string type = "compde";
+	std::string type = "space_time";
 	if(argc > 1) {
 		type = argv[1];
 	}
@@ -16,14 +16,14 @@ int main(int argc, char **argv) {
 
 	if(type == "de") {
 		std::cout << "Starting DE benchmarks, \"output_csv\" = " << (output_csv ? "Yes": "No") << std::endl;
-		de_full_benchmark(output_csv);
+		// de_full_benchmark(output_csv);
 	} else if( type == "lowdim") {
 		std::cout << "Starting low dim benchmarks, \"output_csv\" = " << (output_csv ? "Yes": "No") << std::endl;
 		lowdim_full_benchmark(output_csv);
 	} else if( type == "compde") {
 		if(argc > 2) {
 			std::cout << "Using test case \"" << argv[2] << "\" for real-density computation" << std::endl;; 
-			print_l2_errors(argv[2]);
+			// print_l2_errors(argv[2]);
 		} else {
 			std::cout << "Need an additional argument, ex: \"gaussian_square\"" << std::endl;
 		}
