@@ -108,20 +108,19 @@ double cv_error(
 
 		// Solve
 		model.fit(lambda, scenario.g_init, optimizer, std::forward<Hooks>(hooks)...);
-
-		// Compute the error on the test set
-		fdapde::FeSpace Vh(scenario.discretization, fdapde::P1<1>);
-		fdapde::FeFunction log_dens_func(Vh, model.log_density());
-
 		write_csv("cv_csv/cpp#" + std::to_string(i) + "#" + opt_name + "#" + std::to_string(lambda) + "#" + scenario.title + ".csv", model.log_density());
 
-		double total_dens_eval = 0.0;
-		for(int i = 0; i < test_set.rows(); ++i) {
-			total_dens_eval += std::exp( log_dens_func(test_set.row(i)) );
-		}
+		// Compute the error on the test set
+		// fdapde::FeSpace Vh(scenario.discretization, fdapde::P1<1>);
+		// fdapde::FeFunction log_dens_func(Vh, model.log_density());
 
-		err_tot += fdapde::integral(scenario.discretization, fdapde::QS2DP4)(exp(2.0*log_dens_func));
-		err_tot	-= 2.0 * (total_dens_eval / (double)test_set.rows());
+		// double total_dens_eval = 0.0;
+		// for(int i = 0; i < test_set.rows(); ++i) {
+		// 	total_dens_eval += std::exp( log_dens_func(test_set.row(i)) );
+		// }
+
+		// err_tot += fdapde::integral(scenario.discretization, fdapde::QS2DP4)(exp(2.0*log_dens_func));
+		// err_tot	-= 2.0 * (total_dens_eval / (double)test_set.rows());
 	}
 
 	return err_tot / static_cast<double>(CV_K);
@@ -168,16 +167,16 @@ DEBenchmarkResult benchmark_one(
 	res.cv_duration = std::chrono::high_resolution_clock::now() - cv_begin_time;
 	
 	// Now that we know the à-priori best lambda value, let's do the full benchmark
-	fdapde::GeoFrame geo_data(scenario.discretization);
-	auto& sample = geo_data.template insert_scalar_layer<fdapde::POINT>("sample", scenario.dataset);
-	fdapde::DEPDE model(geo_data, solver);
-	model.set_llik_tolerance(LINK_TOL);
-	auto begin_time = std::chrono::high_resolution_clock::now();
-	model.fit(res.lambda, scenario.g_init, optimizer, std::forward<Hooks>(hooks)...);
-	res.duration = std::chrono::high_resolution_clock::now() - begin_time;
-	res.log_density = model.log_density();
-	res.iterations = optimizer.n_iter();
-	res.loss = optimizer.value();
+	// fdapde::GeoFrame geo_data(scenario.discretization);
+	// auto& sample = geo_data.template insert_scalar_layer<fdapde::POINT>("sample", scenario.dataset);
+	// fdapde::DEPDE model(geo_data, solver);
+	// model.set_llik_tolerance(LINK_TOL);
+	// auto begin_time = std::chrono::high_resolution_clock::now();
+	// model.fit(res.lambda, scenario.g_init, optimizer, std::forward<Hooks>(hooks)...);
+	// res.duration = std::chrono::high_resolution_clock::now() - begin_time;
+	// res.log_density = model.log_density();
+	// res.iterations = optimizer.n_iter();
+	// res.loss = optimizer.value();
 
 	return res;
 }
@@ -338,7 +337,6 @@ DETestScenario<Triangulation<1, 2>> load_test_1_5_d(const std::string &dir_name)
 	return DETestScenario<Triangulation<1, 2>>(dir_name, std::move(dataset), std::move(g_init), std::move(space_discr) );
 }
 
-
 template <
 	typename SpaceTriangulation
 >
@@ -362,7 +360,7 @@ void print_l2_errors(const std::string &test_path) {
 	Eigen::VectorXd true_density_vec = read_csv<double>(dir / path("true_density.csv"))
 		.as_matrix()
 		.array();
-		std::cout << true_density_vec.rows() << " " << true_density_vec.cols() << std::endl;
+		// std::cout << true_density_vec.rows() << " " << true_density_vec.cols() << std::endl;
 
 	for( auto &file: fs::directory_iterator(path(ROOT_DIR) / path("outputs")) ){
 		auto filename = file.path().filename().string();
@@ -399,26 +397,26 @@ void de_full_benchmark(bool output_csv)
 	std::vector<std::thread> workers;
 	auto lambda_proposal = gen_lambda_prop(-2.0, 2.0, 1.0);
 
-	workers.emplace_back( [&](){
-		auto gaussian_square = load_test_2d("gaussian_square");
-		auto gaussian_square_res = benchmark_all_opt(gaussian_square, lambda_proposal);
-		print_benchmark_md(gaussian_square_res, output_file);
-		if(output_csv) save_log_densities(gaussian_square_res);
-	});
+	// workers.emplace_back( [&](){
+	// 	auto gaussian_square = load_test_2d("gaussian_square");
+	// 	auto gaussian_square_res = benchmark_all_opt(gaussian_square, lambda_proposal);
+	// 	print_benchmark_md(gaussian_square_res, output_file);
+	// 	if(output_csv) save_log_densities(gaussian_square_res);
+	// });
 
-	workers.emplace_back([&](){	
-		auto infections_southampton = load_test_2d("infections_southampton");
-		auto infections_southampton_res = benchmark_all_opt(infections_southampton, lambda_proposal);
-		print_benchmark_md(infections_southampton_res, output_file);
-		if(output_csv) save_log_densities(infections_southampton_res);
-	});
+	// workers.emplace_back([&](){	
+	// 	auto infections_southampton = load_test_2d("infections_southampton");
+	// 	auto infections_southampton_res = benchmark_all_opt(infections_southampton, lambda_proposal);
+	// 	print_benchmark_md(infections_southampton_res, output_file);
+	// 	if(output_csv) save_log_densities(infections_southampton_res);
+	// });
 
-	workers.emplace_back([&](){
-		auto horseshoe = load_test_2d("horseshoe");
-		auto horseshoe_res = benchmark_all_opt(horseshoe, lambda_proposal);
-		print_benchmark_md(horseshoe_res, output_file);
-		if(output_csv) save_log_densities(horseshoe_res);
-	});
+	// workers.emplace_back([&](){
+	// 	auto horseshoe = load_test_2d("horseshoe");
+	// 	auto horseshoe_res = benchmark_all_opt(horseshoe, lambda_proposal);
+	// 	print_benchmark_md(horseshoe_res, output_file);
+	// 	if(output_csv) save_log_densities(horseshoe_res);
+	// });
 
 	// workers.emplace_back([&](){
 	// 	auto kent_sphere = load_test_2_5d("kent_sphere");

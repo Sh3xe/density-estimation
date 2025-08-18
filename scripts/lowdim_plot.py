@@ -148,20 +148,20 @@ def plot_population(population, time_frame):
 	Z = np.array([[schwefel(xi, yi) for xi in x] for yi in y])
 
 	plt.imshow(Z, extent=[-MAX_VAL, MAX_VAL, -MAX_VAL, MAX_VAL], origin="lower",  alpha=0.5)
-	plt.colorbar(label="Schwefel Function Value")
-	plt.scatter(*zip(*population), alpha=0.7, color="red")
+	plt.scatter(population["x"], population["y"], color="black", edgecolors="white", linewidths=1.5, s=30, alpha=0.7)
 	plt.title(f"Population at Time Frame {time_frame}")
-	plt.xlabel("X Coordinate")
-	plt.ylabel("Y Coordinate")
+	plt.xlabel("X")
+	plt.ylabel("Y")
 	plt.xlim(-MAX_VAL, MAX_VAL)
 	plt.ylim(-MAX_VAL, MAX_VAL)
 	plt.grid(True)
 
-def create_population_plots(data):
+def create_population_plots(iter_list):
 	images = []
-	for time_frame, population in enumerate(data):
+	for time_frame in iter_list:
 		plt.figure()
-		plot_population(population, time_frame + 1)
+		population = pd.read_csv(f"genetic_csv/{time_frame}_pop.csv")
+		plot_population(population, time_frame)
 		plt.savefig(f"population_{time_frame}.png")
 		images.append(imageio.imread(f"population_{time_frame}.png"))
 	plt.close()
@@ -171,10 +171,8 @@ def create_gif(images, output_path):
 	imageio.mimsave(output_path, images, fps=10)
 
 def animation_genetic():
-	file_path = "population.json"
 	output_gif_path = "outputs/population_animation.gif"
-	data = load_population_data(file_path)
-	images = create_population_plots(data)
+	images = create_population_plots([2, 10, 20])
 	create_gif(images, output_gif_path)
 
 def plot_initial_points(function, bound, csv_name):
@@ -332,10 +330,10 @@ if __name__ == "__main__":
 	# box_plot_comp_all_cpp("schaffer_f6", methods, "Schaffer F6", True)
 	# box_plot_comp_all_cpp("schwefel_10d", methods, "Schewefel 10D")
 
-	box_plot_lowdim("L-BFGS-B", "lbfgs30", "L-BFGS-30")
-	box_plot_lowdim("Nelder-Mead", "nelder_mead", "Nelder-Mead")
-	box_plot_lowdim("CG", "cg_pr_restart", "CG_PR")
-	box_plot_lowdim("CG", "cg_prp_restart", "CG_PRP")
+	# box_plot_lowdim("L-BFGS-B", "lbfgs30", "L-BFGS-30")
+	# box_plot_lowdim("Nelder-Mead", "nelder_mead", "Nelder-Mead")
+	# box_plot_lowdim("CG", "cg_pr_restart", "CG_PR")
+	# box_plot_lowdim("CG", "cg_prp_restart", "CG_PRP")
 
 	# s  = "### {}\n{}\n".format("LBFGS30", output_diff_table("L-BFGS-B", "lbfgs30") )
 	# s += "### {}\n{}\n".format("Nelder-Mead", output_diff_table("Nelder-Mead", "nelder_mead") )
@@ -359,3 +357,5 @@ if __name__ == "__main__":
 	# plot_function_graph(rastrigin, 5.12, "2_rastrigin")
 	# plot_function_graph(sphere, 5, "2_sphere")
 	# plot_function_graph(schwefel, 500, "2_schwefel")
+
+	animation_genetic()

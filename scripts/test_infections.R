@@ -25,22 +25,25 @@ FEMbasis <- create.FEM.basis(mesh = mesh)
 # Import the data
 data <- cbind(xyt$x, xyt$y)
 
+data_time <- xyt$t
+
 # Save the mesh and samples
 write.csv(data, file.path(directory, "sample.csv"))
+write.csv(data_time, file.path(directory, "sample_time.csv"))
 write.csv(mesh$nodes, file.path(directory,"mesh_vertices.csv"))
 write.csv(mesh$triangles, file.path(directory, "mesh_elements.csv"))
 write.csv(mesh$nodesmarker, file.path(directory, "mesh_boundary.csv"))
 
 # Calculate f_init
-lambda_proposal <- 10^seq(from = 3, to = -3, by = -0.5)
+lambda_proposal <- 10^seq(from = 2, to = -2, by = -1)
 
 de <- DE.FEM(
 	data=data,
 	FEMbasis = FEMbasis,
 	lambda = lambda_proposal,
-	nfolds = 10,
-	tol1 = 1e-4,
-	nsimulations = 1000,
+	nfolds = 5,
+	tol1 = 1e-5,
+	nsimulations = 500,
 	preprocess_method = "RightCV",
 	step_method = "Wolfe_Method",
 	direction_method = "L-BFGS10"
@@ -56,7 +59,7 @@ sample <- read.csv(file.path(directory, "sample.csv"))
 log_dens <- read.csv("./outputs/cpp_LBFGS10_infections_southampton_log_density.csv")
 
 # Plot
-FEMfunction <- FEM(coeff = log_dens, FEMbasis = FEMbasis)
+FEMfunction <- FEM(coeff = log_dens$V0, FEMbasis = FEMbasis)
 evaluation <- eval.FEM(FEM = FEMfunction, locations = mesh$nodes)
 estimated_density <- exp(evaluation)
 plot.density.2D.map(coeff = estimated_density, mesh = mesh, colorscale = "viridis")

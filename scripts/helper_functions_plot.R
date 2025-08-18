@@ -7,7 +7,7 @@ library(shiny)
 library(mapview)
 library(sp)
 library(sf)
-# library(htmlwidgets)
+library(htmlwidgets)
 library(maptools)
 library(ggforce)
 library(ggplot2)
@@ -72,7 +72,7 @@ plot.mesh.2D <- function(mesh, ...){
 
 ### PLOT SAMPLE 2D USING plotly ------------------------------------------------
 plot.sample.2D <- function(data, mesh, ...){
-  
+
   # Plot
   p = plot_ly(type = "scatter", mode = "markers") %>%
     layout(scene = list(
@@ -126,7 +126,7 @@ plot.sample.2D <- function(data, mesh, ...){
                 visible = T)
   
   return(p)
-  
+
 }
 
 
@@ -187,13 +187,13 @@ plot.mesh.2D.map <- function(mesh, ...){
   
   mesh_sf = st_as_sfc.mesh.2D(mesh, crs = 4326)
   mesh_sf = st_as_sf(mesh_sf)
-  
+
   map = mapview(mesh_sf, legend = FALSE, map.type = map.type,
                 color = col_mesh, col.regions = col_mesh,
-                layer.name = "mesh", lwd = 1, alpha.regions = 0.25) # +
-  # mapview(st_as_sf(mesh_df, coords = c("lon", "lat"), crs = 4326),
-  #         legend = FALSE, col.region = col_nodes, layer.name = "mesh-nodes",
-  #         alpha.regions = 1, cex = 1.5)
+                 layer.name = "mesh", lwd = 1, alpha.regions = 0.25) # +
+    # mapview(st_as_sf(mesh_df, coords = c("lon", "lat"), crs = 4326),
+    #         legend = FALSE, col.region = col_nodes, layer.name = "mesh-nodes",
+    #         alpha.regions = 1, cex = 1.5)
   
   return(map)
   
@@ -244,8 +244,8 @@ plot.sample.2D.map <- function(data, mesh, ...){
 plot.density.2D.map <- function(coeff, mesh, colorscale = NULL, ...){
   
   coeff <- apply(mesh$triangles, MARGIN = 1, FUN = function(edge){
-    mean(coeff[edge])
-  })
+                   mean(coeff[edge])
+    })
   
   if(is.null(colorscale)) {colorscale = "heat.colors"}
   color_palette <- match.fun(colorscale)
@@ -280,7 +280,7 @@ plot.mesh.2.5D <- function(mesh, ...){
   coeff = rep(0, nrow(mesh$nodes))
   
   plot.density.2.5D(coeff, mesh, ...)
-  
+
   rglwidget()
 }
 
@@ -332,7 +332,7 @@ plot.density.2.5D <- function(coeff, mesh, M = NULL, m = NULL, colorscale = NULL
   nsurf = dim(coeff)[[2]]
   for (isurf in 1:nsurf)
   {
-    open3d()
+    open3d(zoom = zoom, userMatrix = userMatrix, windowRect = windowRect)
     rgl.pop("lights") 
     light3d(specular = "black")
     
@@ -365,7 +365,7 @@ plot.density.2.5D <- function(coeff, mesh, M = NULL, m = NULL, colorscale = NULL
 
 ## WORLD SHAPEFILE LINES -------------------------------------------------------
 shapefile_lines <- function() {
-  
+
   shp <- readShapeSpatial(fn = "data/coastlines/ne_110m_coastline.shp")
   
   # Combine lines in a single matrix
@@ -400,7 +400,7 @@ rgl.sph2car <- function(lat = 0, lon = 0, radius = 1, deg = T, precise = T) {
 
 ### PLOT MESH 1.5D USING ggplot ------------------------------------------------
 plot.mesh.1.5D <- function(mesh, ...){
-  
+
   num_edges = dim(mesh$edges)[1]
   
   x = vector(mode = "double", length = 2*num_edges)
@@ -447,7 +447,7 @@ plot.sample.1.5D <- function(data, mesh, ...){
   data_plot = data.frame(x = x, y = y, group = grp.nodes)
   
   margin_size = 0.1
-  
+
   ggplot(data_plot) +
     geom_link2(aes(x = x, y = y, group = grp.nodes),
                lineend = 'round', n = 1, col = "gray50", ...) +

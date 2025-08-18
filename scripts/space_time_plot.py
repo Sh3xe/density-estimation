@@ -48,6 +48,7 @@ def plot_alg_points(data_path: str):
 		(df['x'] >= min(space)) & (df['x'] <= max(space)) &
 		(df['y'] >= min(time)) & (df['y'] <= max(time))
 	]
+
 	sizes  = np.linspace(30, 60, len(df))
 	alphas = np.linspace(0.8, 1.0, len(df))
 	cmap = mcolors.LinearSegmentedColormap.from_list("black_to_red", ["black", "red"])
@@ -85,6 +86,5 @@ def plot_evol():
 	plt.grid(True)
 	plt.savefig("evol.png", bbox_inches="tight")
 
-
 if __name__ == "__main__":	
-	plot_evol()
+	plot_points()

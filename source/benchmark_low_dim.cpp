@@ -130,6 +130,27 @@ struct EvalCounterHook {
 	int grad_eval_count {0};
 };
 
+struct GeneticSave {
+	GeneticSave() {}
+
+	int current = 0;
+	std::vector<std::string> columns;
+
+	void reset(int n) {
+	}
+
+	template <typename Opt> bool select_hook(Opt& opt) {
+		++current;
+		if(columns.size() == 0) reset(opt.population.cols());
+		utils::write_csv( "genetic_csv/" + std::to_string(current) + std::string("_pop.csv"), {"x", "y"}, opt.population.transpose() );
+		return false;
+	}
+
+	template <typename Opt, typename Obj> bool eval_hook(Opt& opt, Obj& obj) {
+		return false;
+	}
+};
+
 struct LDBenchmarkResult {
 	std::string title;
 	microsec duration;
@@ -305,6 +326,11 @@ void lowdim_full_benchmark(bool output_csv) {
 		return;
 	}
 
+	GeneticOptim<fdapde::Dynamic> go {100, 1e-3, 5, 30};
+	fdapde::ScalarField<fdapde::Dynamic, Schwefel> schwefel_func(2);
+	MatrixXd init_points = utils::load_csv("data/lowdim_inits/2_rastrigin.csv");
+	go.optimize(schwefel_func, init_points.row(1), BinaryTournamentSelection(), GaussianMutation(4.0, 0.95), GeneticSave());
+
 	// {
 	// 	BFGS<fdapde::Dynamic> bfgs {MAX_ITER, TOL, STEP};
 	// 	auto bfgs_res = benchmark_optimizer(bfgs, "bfgs", output_csv, WolfeLineSearch());
@@ -323,17 +349,17 @@ void lowdim_full_benchmark(bool output_csv) {
 	// 	print_optim_benchmark(cg_fr_res, "cg_fr", file);
 	// }
 		
-	{
-		PolakRibiereCG<fdapde::Dynamic> cg_pr {MAX_ITER, TOL, STEP, true};
-		auto cg_pr_res = benchmark_optimizer(cg_pr, "cg_pr_restart", output_csv, WolfeLineSearch());
-		print_optim_benchmark(cg_pr_res, "cg_pr_restart", file);
-	}
+	// {
+	// 	PolakRibiereCG<fdapde::Dynamic> cg_pr {MAX_ITER, TOL, STEP, true};
+	// 	auto cg_pr_res = benchmark_optimizer(cg_pr, "cg_pr_restart", output_csv, WolfeLineSearch());
+	// 	print_optim_benchmark(cg_pr_res, "cg_pr_restart", file);
+	// }
 
-	{
-		PolakRibierePlsCG<fdapde::Dynamic> cg_prp {MAX_ITER, TOL, STEP, true};
-		auto cg_prp_res = benchmark_optimizer(cg_prp, "cg_prp_restart", output_csv, WolfeLineSearch());
-		print_optim_benchmark(cg_prp_res, "cg_prp_restart", file);
-	}
+	// {
+	// 	PolakRibierePlsCG<fdapde::Dynamic> cg_prp {MAX_ITER, TOL, STEP, true};
+	// 	auto cg_prp_res = benchmark_optimizer(cg_prp, "cg_prp_restart", output_csv, WolfeLineSearch());
+	// 	print_optim_benchmark(cg_prp_res, "cg_prp_restart", file);
+	// }
 
 	// {
 	// 	NelderMead<fdapde::Dynamic> nelder_mead {MAX_ITER, TOL};

@@ -58,7 +58,7 @@ true_density <- dens.func.1(mesh$nodes)
 # write.csv(true_density, file.path(directory, "true_density.csv"))
 
 # Plot
-par(mfrow = c(1,3), mai = c(0.5,0.25,0.5,0.5))
+par(mfrow = c(1,2), mai = c(0.5,0.25,0.5,0.5))
 x_plot <- seq(from=0.0, to=1.0, length.out = 100)
 y_plot <- seq(from=0.0, to=1.0, length.out = 100)
 grid_plot <- expand.grid(x_plot, y_plot)
@@ -78,8 +78,8 @@ plot.density.2D(
 	)
 )
 
-log_dens <- read.csv(file.path("outputs/cpp_LBFGS10_gaussian_square_log_density.csv"))
-fem_log_dens <- FEM(coeff = log_dens$V0, FEMbasis = FEMbasis)
+log_dens <- read.csv(file.path("data/gaussian_square/f_init.csv"))
+fem_log_dens <- FEM(coeff = log_dens$x, FEMbasis = FEMbasis)
 log_dens_eval <- eval.FEM(FEM = fem_log_dens, grid_plot)
 dens_eval <- exp(log_dens_eval)
 

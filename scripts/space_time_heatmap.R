@@ -1,11 +1,11 @@
 library(fdaPDE)
 
-dir <- "data/unit_square_space_time"
+dir <- "data/infections_southampton"
 mesh_vertices <- read.csv(file.path(dir, "mesh_vertices.csv"))[,c("V1", "V2")]
 mesh_boundaries <- read.csv(file.path(dir, "mesh_boundary.csv"))$V1
 mesh_elements <- read.csv(file.path(dir, "mesh_elements.csv"))[,c("V1", "V2", "V3")]
 
-sample_space <- read.csv(file.path(dir, "sample_space.csv"))[,c("V1", "V2")]
+sample_space <- read.csv(file.path(dir, "sample.csv"))[,c("V1", "V2")]
 sample_time <- read.csv(file.path(dir, "sample_time.csv"))$x
 
 mesh <- create.mesh.2D(nodes = mesh_vertices, nodesattributes = mesh_boundaries, triangles = mesh_elements)
@@ -32,6 +32,6 @@ de_res <- DE.FEM.time(
 	tol1 = TOL, tol2 = TOL
 )
 
-write.csv(space_values, "outputs/st_hm_space.csv")
-write.csv(time_values, "outputs/st_hm_time.csv")
-write.csv(de_res$CV_err, "outputs/st_hm_cverr.csv")
+write.csv(space_values, "outputs/i_st_hm_space.csv")
+write.csv(time_values, "outputs/i_st_hm_time.csv")
+write.csv(de_res$CV_err, "outputs/i_st_hm_cverr.csv")

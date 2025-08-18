@@ -46,6 +46,19 @@ load_scenario_2d <- function(dir_path, scenario_title) {
 	return( list(mesh=mesh, sample=sample, dir=dir_path, title=scenario_title) )
 }
 
+load_scenario_2_5d <- function(dir_path, scenario_title) {
+	dir <- file.path("./data/", dir_path)
+
+	vertices <- read.csv(file.path(dir, "mesh_vertices.csv"))[, c("V1", "V2", "V3")]
+	elements <- read.csv(file.path(dir, "mesh_elements.csv"))[, c("V1", "V2", "V3")]
+	boundary <- read.csv(file.path(dir, "mesh_boundary.csv"))[, c("V1")]
+	sample <- read.csv(file.path(dir, "sample.csv"))[, c("V1", "V2")]
+
+	mesh <- create.mesh.2.5D(nodes=vertices, nodesattributes = boundary, triangles=elements, order=1)
+
+	return( list(mesh=mesh, sample=sample, dir=dir_path, title=scenario_title) )
+}
+
 test_scenario <- function(scenario, lambda_proposal, direction_method) {
 	FEMbasis <- create.FEM.basis(mesh = scenario$mesh)
 
@@ -88,7 +101,56 @@ benchmark_scenario <- function(scenario, lambdas) {
 	return( df )
 }
 
+# Quadrature points (barycentric coordinates) and weights for QS2DP4
+quad_points <- matrix(c(
+  0.109951743655322, 0.109951743655322, 0.780097956758852,
+  0.780097956758852, 0.109951743655322, 0.109951743655322,
+  0.109951743655322, 0.780097956758852, 0.109951743655322,
+  0.445948490915965, 0.445948490915965, 0.108103018168070,
+  0.445948490915965, 0.108103018168070, 0.445948490915965,
+  0.108103018168070, 0.445948490915965, 0.445948490915965
+), ncol = 3, byrow = TRUE)
+quad_weights <- c(0.111690794839005, 0.111690794839005, 0.111690794839005,
+                  0.054975871827661, 0.054975871827661, 0.054975871827661)
+
+# Function to interpolate a function value at a point inside a triangle
+# Assumes func_vect is defined at the triangle's vertices
+interpolate_at_point <- function(xi, eta, gamma, func_vect) {
+  # Linear interpolation: f_q = xi*f1 + eta*f2 + gamma*f3
+  return(xi * func_vect[1] + eta * func_vect[2] + gamma * func_vect[3])
+}
+
 integral <- function(func_vect, fem_basis) {
+  mesh <- fem_basis$mesh
+  nodes <- mesh$nodes
+  elements <- mesh$triangles
+  total_integral <- 0
+
+  for (i in 1:nrow(elements)) {
+    element_nodes <- nodes[elements[i, ], ]
+    element_func_vect <- func_vect[elements[i, ]]
+    x <- element_nodes[, 1]
+    y <- element_nodes[, 2]
+
+    # Compute the area of the triangle
+    area <- 0.5 * abs(x[1]*(y[2] - y[3]) + x[2]*(y[3] - y[1]) + x[3]*(y[1] - y[2]))
+
+    # Evaluate the integral using quadrature
+    element_integral <- 0
+    for (q in 1:nrow(quad_points)) {
+      xi <- quad_points[q, 1]
+      eta <- quad_points[q, 2]
+      gamma <- quad_points[q, 3]
+      # Interpolate the function value at the quadrature point
+      f_q <- interpolate_at_point(xi, eta, gamma, element_func_vect)
+      element_integral <- element_integral + quad_weights[q] * f_q
+    }
+    total_integral <- total_integral + element_integral * area
+  }
+  return(total_integral)
+}
+
+integral_lin <- function(func_vect, fem_basis) {
   mesh <- fem_basis$mesh
   nodes <- mesh$nodes
   elements <- mesh$triangles
@@ -124,8 +186,8 @@ cv_error <- function(log_density, scenario, cv_k) {
 	return (err / cv_k)
 }
 
-
 cv_error_part <- function(log_density, scenario, cv_i, cv_k) {
+	print(paste0(length(log_density),scenario$title, cv_i, cv_k))
 	FEMbasis <- create.FEM.basis(mesh = scenario$mesh)
 	fem_log_dens <- FEM(coeff = log_density, FEMbasis = FEMbasis)
 	res <- split_dataset(scenario$sample, cv_k, cv_i)
@@ -136,6 +198,7 @@ cv_error_part <- function(log_density, scenario, cv_i, cv_k) {
 compute_cv_errors <- function(language_str, opt_method, scenario, lambda) {
 	files <- list.files("cv_csv")
 	n_errs <- 0
+	err_tot <- 0
 	
 	for(filename in files) {
 		parts <- strsplit(strsplit(filename, ".csv")[[1]], "#")[[1]]
@@ -156,7 +219,7 @@ compute_cv_errors <- function(language_str, opt_method, scenario, lambda) {
 				log_dens_vec <- log_dens$V0
 			}
 			cv_err <- cv_error_part(log_dens_vec, scenario, i, 5)
-			err_tot <- cv_err
+			err_tot <- cv_err + err_tot
 			n_errs <- n_errs + 1
 		}
 	}
@@ -253,16 +316,18 @@ compute_best_lambdas <- function(csv_table_path, cpp_opt_names, scenarios) {
   }
 }
 
+kent_sphere <- load_scenario_2_5d("kent_sphere", "kent_sphere")
 gaussian_square <- load_scenario_2d("gaussian_square", "gaussian_square")
 horseshoe <- load_scenario_2d("horseshoe", "horseshoe")
 infections_southampton <- load_scenario_2d("infections_southampton", "infections_southampton")
+
 lambda_proposal <- 10^seq(from = 2, to = -2, by = -1.0)
 r_opt_names <- c("BFGS", "L-BFGS10", "ConjugateGradientPRP")
 cpp_opt_names <- c("BFGS", "LBFGS10", "cg_pr")
-scenarios <- list(gaussian_square, horseshoe, infections_southampton)
+scenarios <- list(kent_sphere)
 cv_k <- 5
 
-# compute_all_cv_errors(cpp_opt_names, r_opt_names, scenarios, lambda_proposal)
+compute_all_cv_errors(cpp_opt_names, r_opt_names, scenarios, lambda_proposal)
 # compute_best_lambdas("cross_validation_errors.csv", cpp_opt_names, scenarios)
 
 # for(opt_name in r_opt_names) {
@@ -276,13 +341,13 @@ cv_k <- 5
 # compute_cv_errors("cpp", "BFGS", load_scenario_2d("gaussian_square", "gaussian_square"))
 # compute_cv_errors("cpp", "cg_pr", load_scenario_2d("infections_southampton", "infections_southampton"))
 
-# Benchmark DE
-gs <- benchmark_scenario(load_scenario_2d("gaussian_square", "gaussian_square"), lambda_proposal)
-write.csv(gs, "outputs/r_bmrk_gaussian_square.csv")
+# # Benchmark DE
+# gs <- benchmark_scenario(load_scenario_2d("gaussian_square", "gaussian_square"), lambda_proposal)
+# write.csv(gs, "outputs/r_bmrk_gaussian_square.csv")
 
-is <- benchmark_scenario(load_scenario_2d("infections_southampton", "infections_southampton"), lambda_proposal)
-write.csv(is, "outputs/r_bmrk_infection_southampton.csv")
+# is <- benchmark_scenario(load_scenario_2d("infections_southampton", "infections_southampton"), lambda_proposal)
+# write.csv(is, "outputs/r_bmrk_infection_southampton.csv")
 
-hs <- benchmark_scenario(load_scenario_2d("horseshoe", "horseshoe"), lambda_proposal)
-write.csv(hs, "outputs/r_bmrk_horseshoe.csv")
+# hs <- benchmark_scenario(load_scenario_2d("horseshoe", "horseshoe"), lambda_proposal)
+# write.csv(hs, "outputs/r_bmrk_horseshoe.csv")
 

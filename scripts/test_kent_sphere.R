@@ -1,4 +1,5 @@
 library(fdaPDE)
+library(viridis)
 rm(list = ls())
 directory <- "data/kent_sphere"
 
@@ -53,7 +54,14 @@ true_density <- dens.func.3(data = mesh$nodes)
 write.csv(true_density, file.path(directory, "true_density.csv"))
 
 # Ploting
-estimated_density <- read.csv("outputs/lbfgs30_kent_sphere_log_density.csv")
+## [EVALUATION]
+# Create a finer regular mesh of the surface of the unit sphere
+mesh.eval <- refine.by.splitting.mesh.2.5D(mesh = mesh)
+
+# Set up the finite element basis
+FEMbasis.eval <- create.FEM.basis(mesh = mesh.eval)
+
+estimated_density <- read.csv("cpp#1#lbfgs30#0.010000#kent_sphere.csv")
 FEMfunction <- FEM(coeff = estimated_density$V0, FEMbasis = FEMbasis)
 evaluation <- eval.FEM(FEM = FEMfunction, locations = mesh$nodes)
 
@@ -67,5 +75,5 @@ m = min(true_density, estimated_density, na.rm = TRUE)
 M = max(true_density, estimated_density, na.rm = TRUE)
 
 # Plot
-plot.density.2.5D(coeff = true_density, mesh = mesh, min_range = m, max_range = M,
+plot.density.2.5D(coeff = estimated_density, mesh = mesh, min_range = m, max_range = M,
                   colorscale = "viridis")     # function in helper_functions_plot.R

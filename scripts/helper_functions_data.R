@@ -46,9 +46,9 @@ generate.spatial.data.1 <- function(N){
   
   # Create working directory
   dir.create(file.path(getwd(), "data"), showWarnings = FALSE)
-  
+
   if(!file.exists(paste0("data/","sim1_",N,"data.txt"))){
-    
+  
     # Data
     data = c()
     
@@ -62,7 +62,7 @@ generate.spatial.data.1 <- function(N){
       parameters = get.parameters.1(d)
       
       l = mvtnorm::rmvnorm(n = 1, mean = parameters[[1]], sigma = parameters[[2]], method = "svd")
-      
+  
       is_within = st_within(st_sfc(st_point(l)), domain.1)
       if(lengths(is_within) > 0){
         if(is_within[[1]]){
@@ -72,7 +72,7 @@ generate.spatial.data.1 <- function(N){
       }
       
     }
-    
+
     # Export data
     write.table(data, paste0("data/","sim1_",N,"data.txt"), row.names = F, col.names = F)
     # Import data
@@ -94,7 +94,7 @@ dens.func.1 <- function(data){
     p[2]*mvtnorm::dmvnorm(data, mean = get.parameters.1(2)[[1]], sigma = get.parameters.1(2)[[2]]) +
     p[3]*mvtnorm::dmvnorm(data, mean = get.parameters.1(3)[[1]], sigma = get.parameters.1(3)[[2]]) +
     p[4]*mvtnorm::dmvnorm(data, mean = get.parameters.1(4)[[1]], sigma = get.parameters.1(4)[[2]])
-  
+
   return (dens)
 }
 
@@ -178,7 +178,7 @@ generate.spatial.data.2 <- function(N, mesh){
     }
     
     data = data[1:N,]
-    
+
     # Export data
     write.table(data, paste0("data/","sim2_",N,"data.txt"), row.names = F, col.names = F)
     
@@ -313,7 +313,7 @@ generate.spatial.data.3 <- function(N, density.function = dens.func){
       data_unif = sample.uniform.3(N)
       
       # Evaluate the density function on the generated points
-      f <- dens.func.3(data_unif)
+      f <- dens.func.3(data_unif, mesh)
       f[is.na(f)] = max(f, na.rm = TRUE)
       
       # For each generated point, decide to keep it or discard it on the base of the 
@@ -345,7 +345,7 @@ generate.spatial.data.3 <- function(N, density.function = dens.func){
 ### 2.2 SIMULATION STUDY ON A CURVED SURFACE -----------------------------------
 # Sample N points uniformly
 sample.uniform.4 <- function(N){
-  load("data/curved/data.RData")
+  load("data/sim4.fullPoints.proj.RData")
   numFullPoints = nrow(fullPoints.proj)
   unifPointsIndex = sample(1:numFullPoints, N)
   unifPoints = fullPoints.proj[unifPointsIndex,]
@@ -404,7 +404,7 @@ generate.spatial.data.4 <- function(N, mesh){
     data = data[1:N,]
     
     # Export data
-    write.table(data, paste0("data/curved","sim4_",N,"data.txt"), row.names = F, col.names = F)
+    write.table(data, paste0("data/","sim4_",N,"data.txt"), row.names = F, col.names = F)
     
   } else {
     
@@ -518,7 +518,7 @@ intens.func.5 <- function(x, y, L = mesh_linnet, sigma = 0.2){
   ND <- crossdist.lpp(lpp(nodes.lpp, L), lpp(PP, L))
   
   coeff = 100 * 1/sqrt(2*pi*sigma^2) * exp(-ND[current_sources[,1],]^2/(2*sigma^2))
-  
+    
   return (coeff)
 }
 
@@ -526,8 +526,9 @@ intens.func.5 <- function(x, y, L = mesh_linnet, sigma = 0.2){
 integral.dens.func.5 <- function(f){
   
   integral <- sum(fdaPDE:::CPP_get.FEM.Mass.Matrix(f) %*%
-                    intens.func.5(x = f$mesh$nodes[,1], y = f$mesh$nodes[,2]))
+                  intens.func.5(x = f$mesh$nodes[,1], y = f$mesh$nodes[,2]))
   
   return (integral)
   
 }
+
